@@ -33,3 +33,6 @@ google-services.json
 GoogleService-Info.plist
 firebase_options.dart
 firebase.json
+
+# Supabase - sensitive config files
+lib/supabase_options.dart
