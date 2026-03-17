@@ -27,3 +27,9 @@ doc/api/
 
 .flutter-plugins
 .flutter-plugins-dependencies
+
+# Firebase - sensitive config files
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+firebase.json
