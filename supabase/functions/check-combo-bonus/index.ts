@@ -1,8 +1,6 @@
 // ============================================================
 // HabitQuest - check-combo-bonus Edge Function
-// Manuel combo streak kontrolü (dashboard'dan çağrılabilir)
-// Not: submit_daily_log zaten otomatik kontrol eder,
-//      bu endpoint ayrıca dashboard refresh için kullanılır.
+// KEY-BASED i18n: Returns error_key, Flutter translates.
 // ============================================================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -26,7 +24,7 @@ serve(async (req: Request) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: "Missing Authorization header" }),
+        JSON.stringify({ error_key: "errors.missing_auth" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -37,19 +35,15 @@ serve(async (req: Request) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const {
-      data: { user },
-      error: authErr,
-    } = await userClient.auth.getUser();
+    const { data: { user }, error: authErr } = await userClient.auth.getUser();
     if (authErr || !user) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ error_key: "errors.unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-
     const { data: result, error: rpcErr } = await admin.rpc(
       "check_and_award_combo_bonus",
       { p_user_id: user.id }
@@ -64,7 +58,7 @@ serve(async (req: Request) => {
   } catch (error) {
     console.error("Error:", error);
     return new Response(
-      JSON.stringify({ error: "Internal server error", details: (error as Error).message }),
+      JSON.stringify({ error_key: "errors.internal_error", details: (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

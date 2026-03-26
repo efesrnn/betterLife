@@ -1,0 +1,100 @@
+{
+  "app": {
+    "name": "Better Life"
+  },
+
+  "habit_search": {
+    "exact_match": "Bu alışkanlık zaten sistemde kayıtlı.",
+    "maybe_match": "Benzer bir alışkanlık bulundu. Bunu mu demek istediniz?",
+    "invalid_habit": "Geçerli bir alışkanlık olarak tanımlanamadı.",
+    "new_habit_created": "Yeni alışkanlık başarıyla oluşturuldu."
+  },
+
+  "errors": {
+    "input_required": "Girdi gerekli (en az 2 karakter)",
+    "missing_auth": "Yetkilendirme başlığı eksik",
+    "unauthorized": "Yetkisiz erişim",
+    "fields_required": "Alışkanlık ve değer zorunlu",
+    "invalid_value": "Değer negatif olmayan bir sayı olmalı",
+    "habit_not_found": "Alışkanlık bulunamadı",
+    "not_your_habit": "Bu alışkanlık size ait değil",
+    "habit_paused": "Bu alışkanlık duraklatılmış",
+    "invalid_activities": "Aktivite girişleri bir dizi olmalı",
+    "invalid_activity_entry": "Her aktivite girdisinde slug, value ve unit olmalı",
+    "already_logged_today": "Bu alışkanlık için bugün zaten kayıt girilmiş",
+    "user_habit_not_found": "Kullanıcı alışkanlığı bulunamadı",
+    "habit_is_paused": "Bu alışkanlık duraklatılmış",
+    "internal_error": "Sunucu hatası",
+    "combo_check_failed": "Combo kontrolü başarısız"
+  },
+
+  "combo": {
+    "need_at_least_2": "Combo bonus için en az 2 aktif streak gerekli",
+    "cooldown_active": "Sonraki combo bonusu {} gün sonra",
+    "bonus_awarded": "+{} combo bonus puanı kazanıldı!"
+  },
+
+  "program_types": {
+    "QUIT": "Direkt Bırakma",
+    "GRADUAL_DECREASE": "Kademeli Azaltarak Bırakma",
+    "REDUCE": "Azaltma",
+    "GRADUAL_INCREASE": "Kademeli Artırma",
+    "MAINTAIN": "Hedefi Koruma"
+  },
+
+  "categories": {
+    "ADDICTION": "Bağımlılık",
+    "FITNESS": "Fitness",
+    "NUTRITION": "Beslenme",
+    "MENTAL": "Zihinsel",
+    "HEALTH": "Sağlık",
+    "DIGITAL_WELLNESS": "Dijital Sağlık"
+  },
+
+  "risk_levels": {
+    "LOW": "Düşük",
+    "MEDIUM": "Orta",
+    "HIGH": "Yüksek",
+    "CRITICAL": "Kritik"
+  },
+
+  "scoring": {
+    "base_points": "Taban Puan",
+    "streak_bonus": "Streak Bonusu",
+    "effort_bonus": "Efor Bonusu",
+    "activity_bonus": "Aktivite Bonusu",
+    "penalty": "Ceza",
+    "milestone_bonus": "Dönüm Noktası Bonusu",
+    "combo_bonus": "Combo Bonusu",
+    "total": "Toplam"
+  },
+
+  "streak": {
+    "current": "Mevcut Streak",
+    "longest": "En Uzun Streak",
+    "days": "{} gün"
+  },
+
+  "dashboard": {
+    "total_score": "Toplam Puan",
+    "weekly_score": "Haftalık Puan",
+    "active_habits": "Aktif Alışkanlıklar",
+    "logged_today": "Bugün tamamlandı",
+    "not_logged": "Bugün girilmedi",
+    "combo_next_bonus": "Sonraki combo bonusu: {} gün"
+  },
+
+  "leaderboard": {
+    "title": "Sıralama",
+    "rank": "Sıra",
+    "score": "Puan"
+  },
+
+  "friends": {
+    "add": "Arkadaş Ekle",
+    "pending": "Bekleyen İstekler",
+    "accept": "Kabul Et",
+    "reject": "Reddet",
+    "request_sent": "İstek gönderildi"
+  }
+}

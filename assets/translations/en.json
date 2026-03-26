@@ -1,0 +1,100 @@
+{
+  "app": {
+    "name": "Better Life"
+  },
+
+  "habit_search": {
+    "exact_match": "This habit already exists in the system.",
+    "maybe_match": "A similar habit was found. Did you mean this?",
+    "invalid_habit": "Could not be identified as a valid habit.",
+    "new_habit_created": "New habit created successfully."
+  },
+
+  "errors": {
+    "input_required": "Input is required (min 2 characters)",
+    "missing_auth": "Missing authorization header",
+    "unauthorized": "Unauthorized",
+    "fields_required": "Habit and value are required",
+    "invalid_value": "Value must be a non-negative number",
+    "habit_not_found": "Habit not found",
+    "not_your_habit": "This habit does not belong to you",
+    "habit_paused": "This habit is paused",
+    "invalid_activities": "Activity entries must be an array",
+    "invalid_activity_entry": "Each activity entry must have slug, value, and unit",
+    "already_logged_today": "Already logged for this habit today",
+    "user_habit_not_found": "User habit not found",
+    "habit_is_paused": "This habit is paused",
+    "internal_error": "Internal server error",
+    "combo_check_failed": "Combo check failed"
+  },
+
+  "combo": {
+    "need_at_least_2": "Need at least 2 active streaks for combo bonus",
+    "cooldown_active": "Next combo bonus in {} days",
+    "bonus_awarded": "+{} combo bonus points earned!"
+  },
+
+  "program_types": {
+    "QUIT": "Quit",
+    "GRADUAL_DECREASE": "Gradual Decrease",
+    "REDUCE": "Reduce",
+    "GRADUAL_INCREASE": "Gradual Increase",
+    "MAINTAIN": "Maintain"
+  },
+
+  "categories": {
+    "ADDICTION": "Addiction",
+    "FITNESS": "Fitness",
+    "NUTRITION": "Nutrition",
+    "MENTAL": "Mental",
+    "HEALTH": "Health",
+    "DIGITAL_WELLNESS": "Digital Wellness"
+  },
+
+  "risk_levels": {
+    "LOW": "Low",
+    "MEDIUM": "Medium",
+    "HIGH": "High",
+    "CRITICAL": "Critical"
+  },
+
+  "scoring": {
+    "base_points": "Base Points",
+    "streak_bonus": "Streak Bonus",
+    "effort_bonus": "Effort Bonus",
+    "activity_bonus": "Activity Bonus",
+    "penalty": "Penalty",
+    "milestone_bonus": "Milestone Bonus",
+    "combo_bonus": "Combo Bonus",
+    "total": "Total"
+  },
+
+  "streak": {
+    "current": "Current Streak",
+    "longest": "Longest Streak",
+    "days": "{} days"
+  },
+
+  "dashboard": {
+    "total_score": "Total Score",
+    "weekly_score": "Weekly Score",
+    "active_habits": "Active Habits",
+    "logged_today": "Completed today",
+    "not_logged": "Not logged today",
+    "combo_next_bonus": "Next combo bonus: {} days"
+  },
+
+  "leaderboard": {
+    "title": "Leaderboard",
+    "rank": "Rank",
+    "score": "Score"
+  },
+
+  "friends": {
+    "add": "Add Friend",
+    "pending": "Pending Requests",
+    "accept": "Accept",
+    "reject": "Reject",
+    "request_sent": "Request sent"
+  }
+}
