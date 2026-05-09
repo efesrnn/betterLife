@@ -1,6 +1,10 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_options.dart';
+import 'habit_selection_screen.dart'; // YENİ: Dosyamızı buraya dahil ettik
+import 'auth_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,11 +24,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       title: 'Better Life',
-      home: Scaffold(
-        body: Center(child: Text('Better Life')),
+      debugShowCheckedModeBanner: false, // Sağ üstteki "DEBUG" yazısını kaldırır
+      theme: ThemeData(
+        fontFamily: 'Comic Sans MS', // Tasarımın el çizimi hissiyatını artırmak için eklenebilir (opsiyonel)
+        scaffoldBackgroundColor: Colors.white,
       ),
+      // YENİ: Başlangıç ekranımızı tasarladığımız ekran yapıyoruz
+      home: const AuthScreen(),
     );
   }
 }
