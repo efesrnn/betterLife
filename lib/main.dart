@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_options.dart';
 import 'habit_selection_screen.dart'; // YENİ: Dosyamızı buraya dahil ettik
 import 'auth_screen.dart';
+import 'auth_gate.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +33,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.white,
       ),
       // YENİ: Başlangıç ekranımızı tasarladığımız ekran yapıyoruz
-      home: const AuthScreen(),
+      home: const AuthGate(),
     );
   }
 }

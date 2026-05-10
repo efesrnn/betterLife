@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'habit_selection_screen.dart';
+import 'home_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -51,11 +52,25 @@ class _AuthScreenState extends State<AuthScreen> {
       }
 
       if (mounted) {
-        // Başarılı olursa hedef sayfaya (Alışkanlık seçimi) geç ve geri dönmeyi engelle
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HabitSelectionScreen()),
-        );
+        // İşlem başarılı olduktan sonra kullanıcının verilerini (metadata) çekiyoruz
+        final user = supabase.auth.currentUser;
+        final isSetupComplete = user?.userMetadata?['is_setup_complete'] ?? false;
+
+        // Akıllı Yönlendirme (Auth Gate mantığı)
+        if (isSetupComplete) {
+          // Eğer önceden kurulumu tamamlamış (is_setup_complete: true) biriyse doğrudan Ana Sayfaya at
+          Navigator.pushReplacement(
+            context,
+            // BURASI DEĞİŞTİ: DummyHomeScreen yerine HomeScreen yazıyoruz
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        } else {
+          // Yeni kayıt olmuşsa veya kurulumu yarım bırakmışsa en baştan Alışkanlık seçimine at
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HabitSelectionScreen()),
+          );
+        }
       }
     } on AuthException catch (e) {
       // Supabase'den gelen hatalar (örn: yanlış şifre)

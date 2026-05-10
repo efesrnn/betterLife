@@ -35,12 +35,22 @@ class _HabitSelectionScreenState extends State<HabitSelectionScreen> {
     return isListSelected || _isOtherSelected;
   }
 
-  // YENİ: Sonraki sayfaya geçiş fonksiyonu
   void _goToNextPage() {
+    // Seçilen alışkanlığı tespit edelim
+    String selectedHabitName = '';
+    if (_isOtherSelected) {
+      selectedHabitName = _otherController.text.trim();
+    } else {
+      final selected = _habits.firstWhere((h) => h['selected'] == true, orElse: () => {});
+      selectedHabitName = selected['name'] ?? '';
+    }
+
     Navigator.push(
       context,
-      // BURASI DEĞİŞTİ: Artık yeni tasarladığımız sayfaya gidiyor
-      MaterialPageRoute(builder: (context) => const GoalSelectionScreen()),
+      MaterialPageRoute(
+        // Seçimi Goal ekranına yolluyoruz
+        builder: (context) => GoalSelectionScreen(selectedHabit: selectedHabitName),
+      ),
     );
   }
 

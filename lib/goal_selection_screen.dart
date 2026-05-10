@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'username_selection_screen.dart';
 
 class GoalSelectionScreen extends StatefulWidget {
-  const GoalSelectionScreen({super.key});
+  final String selectedHabit; // YENİ: Önceki sayfadan gelen veri
+  const GoalSelectionScreen({super.key, required this.selectedHabit});
 
   @override
   State<GoalSelectionScreen> createState() => _GoalSelectionScreenState();
@@ -20,9 +21,22 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
   }
 
   void _goToNextPage() {
+    // Seçilen hedefi metin olarak alalım
+    String selectedGoalName = '';
+    if (_selectedIndex == 0) selectedGoalName = 'Fully quit in once.';
+    if (_selectedIndex == 1) selectedGoalName = 'Fully quit by reducing step by step.';
+    if (_selectedIndex == 2) selectedGoalName = 'Reduce by $_selectedPercentage';
+    if (_selectedIndex == 3) selectedGoalName = 'Reduce step by step';
+
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const UsernameSelectionScreen()),
+      MaterialPageRoute(
+        // İki veriyi de Username sayfasına yolluyoruz
+        builder: (context) => UsernameSelectionScreen(
+          selectedHabit: widget.selectedHabit,
+          selectedGoal: selectedGoalName,
+        ),
+      ),
     );
   }
 
