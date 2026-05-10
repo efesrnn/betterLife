@@ -1,17 +1,3 @@
-// ============================================================
-// HabitQuest - habit_repository.dart (v3 - key-based i18n)
-//
-// Backend returns `error_key` / `message_key` (e.g. "errors.missing_auth")
-// Flutter's easy_localization translates via tr.json / en.json / xx.json
-//
-// Usage in UI:
-//   try {
-//     await repo.submitDailyLog(...);
-//   } on HabitQuestException catch (e) {
-//     showError(e.messageKey.tr());  // easy_localization .tr() extension
-//   }
-// ============================================================
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HabitRepository {
