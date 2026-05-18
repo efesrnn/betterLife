@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'username_selection_screen.dart';
 
 class GoalSelectionScreen extends StatefulWidget {
-  final String selectedHabit; // YENİ: Önceki sayfadan gelen veri
+  final String selectedHabit; // YENİ: Önceki sayfadan gelen veri (slug)
   const GoalSelectionScreen({super.key, required this.selectedHabit});
 
   @override
@@ -21,12 +22,16 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
   }
 
   void _goToNextPage() {
-    // Seçilen hedefi metin olarak alalım
-    String selectedGoalName = '';
-    if (_selectedIndex == 0) selectedGoalName = 'Fully quit in once.';
-    if (_selectedIndex == 1) selectedGoalName = 'Fully quit by reducing step by step.';
-    if (_selectedIndex == 2) selectedGoalName = 'Reduce by $_selectedPercentage';
-    if (_selectedIndex == 3) selectedGoalName = 'Reduce step by step';
+    // Hedefi stabil bir slug olarak saklarız (ileride DB/i18n eşlemesi için).
+    // 0 → quit_at_once, 1 → gradual_quit, 2 → reduce_percent_<N>, 3 → reduce_step
+    String selectedGoalSlug = '';
+    if (_selectedIndex == 0) selectedGoalSlug = 'quit_at_once';
+    if (_selectedIndex == 1) selectedGoalSlug = 'gradual_quit';
+    if (_selectedIndex == 2) {
+      final pct = _selectedPercentage?.replaceAll('%', '') ?? '';
+      selectedGoalSlug = 'reduce_percent_$pct';
+    }
+    if (_selectedIndex == 3) selectedGoalSlug = 'reduce_step';
 
     Navigator.push(
       context,
@@ -34,7 +39,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
         // İki veriyi de Username sayfasına yolluyoruz
         builder: (context) => UsernameSelectionScreen(
           selectedHabit: widget.selectedHabit,
-          selectedGoal: selectedGoalName,
+          selectedGoal: selectedGoalSlug,
         ),
       ),
     );
@@ -64,10 +69,10 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Center(
+              Center(
                 child: Text(
-                  "What's Your Goal?",
-                  style: TextStyle(
+                  'goal_setup.title'.tr(),
+                  style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
@@ -76,10 +81,10 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
               ),
               const SizedBox(height: 50),
 
-              _buildOptionRow(0, 'Fully quit in once.'),
-              _buildOptionRow(1, 'Fully quit by reducing step\nby step.'),
+              _buildOptionRow(0, 'goal_setup.options.quit_at_once'.tr()),
+              _buildOptionRow(1, 'goal_setup.options.gradual_quit'.tr()),
               _buildPercentageRow(2),
-              _buildOptionRow(3, 'Reduce step by step'),
+              _buildOptionRow(3, 'goal_setup.options.reduce_step'.tr()),
 
               const SizedBox(height: 60),
 
@@ -174,7 +179,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
             ),
           ),
           Text(
-            'Reduce by ',
+            'goal_setup.reduce_by'.tr(),
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -193,7 +198,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
               child: DropdownButton<String>(
                 value: _selectedPercentage,
                 hint: Text(
-                  'Percentage',
+                  'goal_setup.percentage_hint'.tr(),
                   style: TextStyle(fontWeight: FontWeight.bold, color: itemColor), // Hint rengi dinamik
                 ),
                 icon: Icon(Icons.arrow_drop_down, color: itemColor, size: 30), // Ok ikonu rengi dinamik
@@ -226,14 +231,14 @@ class DummyFinalScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Next Step', style: TextStyle(color: Colors.black)),
+        title: Text('common.next'.tr(), style: const TextStyle(color: Colors.black)),
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.black),
         elevation: 0,
       ),
       body: const Center(
         child: Text(
-          'Harika! İkinci sayfayı da geçtin.',
+          'Next',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ),

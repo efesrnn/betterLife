@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_screen.dart';
@@ -20,10 +21,21 @@ class _HomeScreenState extends State<HomeScreen> {
   // Günlük sayaç değişkenleri
   int _dailyCount = 0;
   String _todayDateStr = '';
-  String _todayDayName = '';
+  // Tarih bağımsız; haftanın gün indeksi (1..7) — etiket weekdays.<n>'den çevrilir.
+  int _todayWeekdayIndex = 1;
 
   // YENİ: Alt menüde hangi sekmede olduğumuzu tutan değişken (0: Ana Sayfa, 1: Arkadaşlar)
   int _selectedIndex = 0;
+
+  // Bilinen alışkanlık slug'ları — i18n key'lerinde gömülü olanlar.
+  // Bunlardan biri değilse "generic" anahtarına argüman olarak geçilir.
+  static const _knownHabitSlugs = <String>{
+    'cigarettes',
+    'vapes',
+    'alcohol',
+    'junk_food',
+    'screen_time',
+  };
 
   @override
   void initState() {
@@ -48,9 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final year = now.year.toString().substring(2);
 
     _todayDateStr = '$day / $month / $year';
-
-    const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
-    _todayDayName = days[now.weekday - 1];
+    _todayWeekdayIndex = now.weekday; // 1..7 (Pazartesi..Pazar)
   }
 
   Future<void> _loadDailyCount() async {
@@ -103,27 +113,39 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  String _getDynamicQuestion(String habit) {
-    final h = habit.toLowerCase();
-    if (h.contains('cigarette')) return 'Did you smoke any cigarettes since you were away?';
-    if (h.contains('alcohol')) return 'Did you drink any alcohol since you were away?';
-    if (h.contains('vape')) return 'Did you vape since you were away?';
-    if (h.contains('junk food')) return 'Did you eat any junk food since you were away?';
-    if (h.contains('screen')) return 'Did you break your screen time rule since you were away?';
-    return 'Did you slip up with $habit since you were away?';
+  // Habit metadata değeri ya bilinen bir slug ('cigarettes'), ya da
+  // kullanıcının "Other..." kutusuna yazdığı serbest metindir.
+  // Eski string ('Cigarettes', 'Junk Food', ...) için geriye dönük eşleme yaparız.
+  String _habitSlugFromRaw(String raw) {
+    final h = raw.toLowerCase().trim();
+    if (h.isEmpty) return '';
+    if (_knownHabitSlugs.contains(h)) return h;
+    if (h.contains('cigarette')) return 'cigarettes';
+    if (h.contains('vape')) return 'vapes';
+    if (h.contains('alcohol')) return 'alcohol';
+    if (h.contains('junk')) return 'junk_food';
+    if (h.contains('screen')) return 'screen_time';
+    return '';
   }
 
-  String _getDailyLabel(String habit) {
-    final h = habit.toLowerCase();
-    if (h.contains('cigarette')) return 'Cigarettes smoked\ntoday.';
-    if (h.contains('alcohol')) return 'Alcohol consumed\ntoday.';
-    if (h.contains('vape')) return 'Vapes hit\ntoday.';
-    if (h.contains('junk food')) return 'Junk food eaten\ntoday.';
-    return '$habit\ntoday.';
+  String _getDynamicQuestion(String habitRaw) {
+    final slug = _habitSlugFromRaw(habitRaw);
+    if (slug.isNotEmpty) {
+      return 'home.checkin.questions.$slug'.tr();
+    }
+    return 'home.checkin.questions.generic'.tr(namedArgs: {'habit': habitRaw});
+  }
+
+  String _getDailyLabel(String habitRaw) {
+    final slug = _habitSlugFromRaw(habitRaw);
+    if (slug.isNotEmpty) {
+      return 'home.labels.$slug'.tr();
+    }
+    return 'home.labels.generic'.tr(namedArgs: {'habit': habitRaw});
   }
 
   void _showCheckInDialog() {
-    final habit = _userData['habit'] ?? 'your habit';
+    final habit = (_userData['habit'] as String?) ?? '';
     final question = _getDynamicQuestion(habit);
     int popUpCount = 0;
 
@@ -139,7 +161,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     side: const BorderSide(color: Colors.black, width: 3),
                   ),
                   backgroundColor: Colors.white,
-                  title: const Text('Daily Check-In', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24), textAlign: TextAlign.center),
+                  title: Text(
+                    'home.checkin.title'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24),
+                    textAlign: TextAlign.center,
+                  ),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -157,11 +183,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   actionsAlignment: MainAxisAlignment.center,
                   actions: [
-                    if (popUpCount == 0) TextButton(onPressed: () => Navigator.pop(context), child: const Text("No, I stayed strong!", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 18))),
+                    if (popUpCount == 0)
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          'home.checkin.stayed_strong'.tr(),
+                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 18),
+                        ),
+                      ),
                     if (popUpCount > 0) ElevatedButton(
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: const RoundedRectangleBorder(side: BorderSide(color: Colors.black, width: 2))),
                       onPressed: () { _updateDailyCount(_dailyCount + popUpCount); Navigator.pop(context); },
-                      child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                      child: Text('home.checkin.save'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                     ),
                   ],
                 );
@@ -201,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
             // Ekranda yeşil bildirim göster
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('🎉 $friendName accepted your friend request!'),
+                content: Text('friends.request_accepted_notification'.tr(namedArgs: {'name': friendName})),
                 backgroundColor: Colors.green,
                 duration: const Duration(seconds: 4), // Ekranda 4 saniye kalsın
               ),
@@ -230,10 +263,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final habit = _userData['habit'] ?? 'Habit';
+    final habit = (_userData['habit'] as String?) ?? '';
 
     // Sekmelere göre gösterilecek ekranların listesi
-    final List<Widget> _screens = [
+    final List<Widget> screens = [
       _buildHomeTab(habit), // 0. İndeks: Ana Takvim Ekranı
       const FriendsScreen(), // 1. İndeks: Arkadaşlar Ekranı
     ];
@@ -244,7 +277,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black, size: 30),
-        title: const Text('Better Life', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 24)),
+        title: Text('app.name'.tr(), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 24)),
         centerTitle: true,
       ),
       drawer: Drawer(
@@ -260,18 +293,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const Icon(Icons.account_circle, size: 60, color: Colors.white),
                   const SizedBox(height: 10),
-                  Text(_userData['username']?.toString().toUpperCase() ?? 'USER', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                  Text(
+                    _userData['username']?.toString().toUpperCase() ?? 'common.user'.tr(),
+                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
                   Text(_email, style: const TextStyle(color: Colors.white70, fontSize: 14)),
                 ],
               ),
             ),
-            ListTile(leading: const Icon(Icons.logout, color: Colors.red, size: 30), title: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18)), onTap: _logout),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red, size: 30),
+              title: Text('common.logout'.tr(), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18)),
+              onTap: _logout,
+            ),
           ],
         ),
       ),
 
       // Gövde kısmı seçilen sekmeye göre değişecek
-      body: _screens[_selectedIndex],
+      body: screens[_selectedIndex],
 
       // YENİ: Alt Menü (Bottom Navigation Bar)
       bottomNavigationBar: BottomNavigationBar(
@@ -284,16 +324,16 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
-        items: const <BottomNavigationBarItem>[
+        items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined),
+            activeIcon: const Icon(Icons.home),
+            label: 'home.nav.home'.tr(),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
-            activeIcon: Icon(Icons.people),
-            label: 'Friends',
+            icon: const Icon(Icons.people_outline),
+            activeIcon: const Icon(Icons.people),
+            label: 'home.nav.friends'.tr(),
           ),
         ],
       ),
@@ -322,7 +362,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 20),
                 Text(_todayDateStr, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: 2)),
                 const SizedBox(height: 10),
-                Text(_todayDayName, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                Text(
+                  'weekdays.$_todayWeekdayIndex'.tr(),
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                ),
                 const SizedBox(height: 40),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

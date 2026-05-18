@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'goal_selection_screen.dart';
 
 class HabitSelectionScreen extends StatefulWidget {
@@ -9,13 +10,14 @@ class HabitSelectionScreen extends StatefulWidget {
 }
 
 class _HabitSelectionScreenState extends State<HabitSelectionScreen> {
-  // Alışkanlık listemiz
+  // Alışkanlık listemiz. 'slug' stabil tanımlayıcı; UI'da 'habit_setup.habits.<slug>'
+  // i18n anahtarı ile metin gelir. 'name' (üretildiğinde) sadece yedek/log için.
   final List<Map<String, dynamic>> _habits = [
-    {'name': 'Cigarettes', 'icon': '🚬', 'selected': true},
-    {'name': 'Vapes', 'icon': '💨', 'selected': false},
-    {'name': 'Alcohol', 'icon': '🍾', 'selected': false},
-    {'name': 'Junk Food', 'icon': '🍔', 'selected': false},
-    {'name': 'Screen Time', 'icon': '📱💻', 'selected': false},
+    {'slug': 'cigarettes', 'icon': '🚬', 'selected': true},
+    {'slug': 'vapes', 'icon': '💨', 'selected': false},
+    {'slug': 'alcohol', 'icon': '🍾', 'selected': false},
+    {'slug': 'junk_food', 'icon': '🍔', 'selected': false},
+    {'slug': 'screen_time', 'icon': '📱💻', 'selected': false},
   ];
 
   bool _isOtherSelected = false;
@@ -36,20 +38,21 @@ class _HabitSelectionScreenState extends State<HabitSelectionScreen> {
   }
 
   void _goToNextPage() {
-    // Seçilen alışkanlığı tespit edelim
-    String selectedHabitName = '';
+    // Seçilen alışkanlığı tespit edelim. Stabil slug saklarız (DB ve i18n için);
+    // serbest metin ise olduğu gibi geçer.
+    String selectedHabitSlug = '';
     if (_isOtherSelected) {
-      selectedHabitName = _otherController.text.trim();
+      selectedHabitSlug = _otherController.text.trim();
     } else {
       final selected = _habits.firstWhere((h) => h['selected'] == true, orElse: () => {});
-      selectedHabitName = selected['name'] ?? '';
+      selectedHabitSlug = (selected['slug'] as String?) ?? '';
     }
 
     Navigator.push(
       context,
       MaterialPageRoute(
         // Seçimi Goal ekranına yolluyoruz
-        builder: (context) => GoalSelectionScreen(selectedHabit: selectedHabitName),
+        builder: (context) => GoalSelectionScreen(selectedHabit: selectedHabitSlug),
       ),
     );
   }
@@ -71,9 +74,9 @@ class _HabitSelectionScreenState extends State<HabitSelectionScreen> {
                   border: Border.all(color: Colors.black87, width: 3),
                   borderRadius: const BorderRadius.all(Radius.elliptical(150, 70)),
                 ),
-                child: const Text(
-                  'Better Life',
-                  style: TextStyle(
+                child: Text(
+                  'app.name'.tr(),
+                  style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.5,
@@ -83,10 +86,10 @@ class _HabitSelectionScreenState extends State<HabitSelectionScreen> {
               const SizedBox(height: 50),
 
               // 2. Başlık Metni
-              const Text(
-                'CHOOSE A HABIT TO\nOVERCOME WITH',
+              Text(
+                'habit_setup.choose_title'.tr(),
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.2,
@@ -119,6 +122,7 @@ class _HabitSelectionScreenState extends State<HabitSelectionScreen> {
   }
 
   Widget _buildHabitRow(Map<String, dynamic> habit) {
+    final slug = habit['slug'] as String;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
@@ -137,7 +141,7 @@ class _HabitSelectionScreenState extends State<HabitSelectionScreen> {
             ),
           ),
           Text(
-            habit['name'],
+            'habit_setup.habits.$slug'.tr(),
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(width: 12),
@@ -189,10 +193,10 @@ class _HabitSelectionScreenState extends State<HabitSelectionScreen> {
                     _isOtherSelected = text.trim().isNotEmpty;
                   });
                 },
-                decoration: const InputDecoration(
-                  hintText: 'Other... (Type in)',
-                  hintStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: InputDecoration(
+                  hintText: 'habit_setup.other_hint'.tr(),
+                  hintStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   border: InputBorder.none,
                 ),
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -214,14 +218,14 @@ class DummyNextScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Next Step', style: TextStyle(color: Colors.black)),
+        title: Text('common.next'.tr(), style: const TextStyle(color: Colors.black)),
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.black),
         elevation: 0,
       ),
       body: const Center(
         child: Text(
-          'Harika! Bir sonraki sayfaya geçtin.',
+          'Next',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ),

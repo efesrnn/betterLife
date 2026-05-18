@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'habit_selection_screen.dart';
 import 'home_screen.dart';
@@ -35,7 +36,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password.'), backgroundColor: Colors.red),
+        SnackBar(content: Text('auth.please_enter_credentials'.tr()), backgroundColor: Colors.red),
       );
       return;
     }
@@ -80,7 +81,7 @@ class _AuthScreenState extends State<AuthScreen> {
     } catch (e) {
       // Diğer hatalar
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('An unexpected error occurred.'), backgroundColor: Colors.red),
+        SnackBar(content: Text('auth.unexpected_error'.tr()), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) {
@@ -107,9 +108,9 @@ class _AuthScreenState extends State<AuthScreen> {
                     border: Border.all(color: Colors.black87, width: 3),
                     borderRadius: const BorderRadius.all(Radius.elliptical(150, 70)),
                   ),
-                  child: const Text(
-                    'Better Life',
-                    style: TextStyle(
+                  child: Text(
+                    'app.name'.tr(),
+                    style: const TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.5,
@@ -120,7 +121,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
                 // 2. Başlık Metni
                 Text(
-                  _isLogin ? 'WELCOME BACK' : 'START YOUR JOURNEY',
+                  _isLogin ? 'auth.welcome_back'.tr() : 'auth.start_journey'.tr(),
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
@@ -132,7 +133,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 // 3. Email Kutusu
                 _buildTextField(
                   controller: _emailController,
-                  hintText: 'Email',
+                  hintText: 'auth.email'.tr(),
                   icon: Icons.email_outlined,
                   obscureText: false,
                 ),
@@ -141,7 +142,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 // 4. Şifre Kutusu
                 _buildTextField(
                   controller: _passwordController,
-                  hintText: 'Password',
+                  hintText: 'auth.password'.tr(),
                   icon: Icons.lock_outline,
                   obscureText: true,
                 ),
@@ -164,7 +165,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
                         : Text(
-                      _isLogin ? 'LOGIN' : 'SIGN UP',
+                      _isLogin ? 'auth.login'.tr() : 'auth.sign_up'.tr(),
                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 1.5),
                     ),
                   ),
@@ -180,8 +181,8 @@ class _AuthScreenState extends State<AuthScreen> {
                   },
                   child: Text(
                     _isLogin
-                        ? "Don't have an account? Sign up here."
-                        : "Already have an account? Login here.",
+                        ? 'auth.no_account_signup'.tr()
+                        : 'auth.have_account_login'.tr(),
                     style: const TextStyle(
                       color: Colors.black87,
                       fontSize: 16,

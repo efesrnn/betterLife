@@ -1,5 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+// Aynı slug eşlemesi home_screen.dart'taki ile bilinçli olarak çoğaltıldı —
+// bu parça (i18n) çok yer dokunmasın diye. Sonraki parçada paylaşılan
+// yardımcıya taşınacak.
+const _kKnownHabitSlugs = <String>{
+  'cigarettes',
+  'vapes',
+  'alcohol',
+  'junk_food',
+  'screen_time',
+};
+
+String _habitSlug(String raw) {
+  final h = raw.toLowerCase().trim();
+  if (h.isEmpty) return '';
+  if (_kKnownHabitSlugs.contains(h)) return h;
+  if (h.contains('cigarette')) return 'cigarettes';
+  if (h.contains('vape')) return 'vapes';
+  if (h.contains('alcohol')) return 'alcohol';
+  if (h.contains('junk')) return 'junk_food';
+  if (h.contains('screen')) return 'screen_time';
+  return '';
+}
+
+/// "Quitting cigarettes" gibi metni çeviri ile döndürür; slug yoksa ham metni
+/// argüman olarak geçer.
+String _quittingLabel(String habitRaw) {
+  final slug = _habitSlug(habitRaw);
+  final habitText = slug.isNotEmpty
+      ? 'habit_setup.habits.$slug'.tr()
+      : habitRaw;
+  return 'friends.quitting'.tr(namedArgs: {'habit': habitText});
+}
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -12,9 +46,10 @@ class _FriendsScreenState extends State<FriendsScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
 
+  // Demo verisi — gerçek arkadaş çekimi sonraki parçada gelecek.
   final List<Map<String, String>> _allFriends = [
-    {'name': 'Mertcan', 'habit': 'Cigarettes', 'days': '12'},
-    {'name': 'Ahmet', 'habit': 'Alcohol', 'days': '5'},
+    {'name': 'Mertcan', 'habit': 'cigarettes', 'days': '12'},
+    {'name': 'Ahmet', 'habit': 'alcohol', 'days': '5'},
   ];
 
   List<Map<String, String>> _filteredFriends = [];
@@ -73,7 +108,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                           onChanged: _filterFriends,
                           autofocus: true,
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                          decoration: const InputDecoration(hintText: 'Find friend...', border: InputBorder.none),
+                          decoration: InputDecoration(hintText: 'friends.search_hint'.tr(), border: InputBorder.none),
                         ),
                       ),
                   ],
@@ -113,7 +148,12 @@ class _FriendsScreenState extends State<FriendsScreen> {
         const Divider(color: Colors.black, thickness: 2, height: 1),
         Expanded(
           child: _filteredFriends.isEmpty
-              ? const Center(child: Text('No friends found.', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black54)))
+              ? Center(
+                  child: Text(
+                    'friends.no_friends_found'.tr(),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black54),
+                  ),
+                )
               : ListView.builder(
             padding: const EdgeInsets.all(20),
             itemCount: _filteredFriends.length,
@@ -132,7 +172,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(friend['name']!, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                          Text('Quitting ${friend['habit']}', style: const TextStyle(fontSize: 16, color: Colors.black54)),
+                          Text(_quittingLabel(friend['habit'] ?? ''), style: const TextStyle(fontSize: 16, color: Colors.black54)),
                         ],
                       ),
                     ),
@@ -199,7 +239,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
-        title: const Text('Friend Requests', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: Text('friends.requests_title'.tr(), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
@@ -209,7 +249,12 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
 
           final requests = snapshot.data;
           if (requests == null || requests.isEmpty) {
-            return const Center(child: Text('No new requests.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54)));
+            return Center(
+              child: Text(
+                'friends.no_requests'.tr(),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54),
+              ),
+            );
           }
 
           return ListView.builder(
@@ -229,8 +274,8 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(req['username'] ?? 'Unknown', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                          Text('Quitting ${req['habit']}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                          Text(req['username'] ?? 'common.unknown'.tr(), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          Text(_quittingLabel((req['habit'] as String?) ?? ''), style: const TextStyle(fontSize: 14, color: Colors.black54)),
                         ],
                       ),
                     ),
@@ -239,11 +284,11 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.check_circle, color: Colors.green, size: 35),
-                          onPressed: () => _acceptRequest(req['friendship_id']),
+                          onPressed: () => _acceptRequest(req['friendship_id'].toString()),
                         ),
                         IconButton(
                           icon: const Icon(Icons.cancel, color: Colors.red, size: 35),
-                          onPressed: () => _rejectRequest(req['friendship_id']),
+                          onPressed: () => _rejectRequest(req['friendship_id'].toString()),
                         ),
                       ],
                     ),
@@ -307,7 +352,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
-        title: const Text('Discover People', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 24)),
+        title: Text('friends.discover_title'.tr(), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 24)),
         centerTitle: true,
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
@@ -316,7 +361,14 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: Colors.black));
 
           final users = snapshot.data;
-          if (users == null || users.isEmpty) return const Center(child: Text('No other users found yet.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)));
+          if (users == null || users.isEmpty) {
+            return Center(
+              child: Text(
+                'friends.no_users'.tr(),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            );
+          }
 
           return ListView.builder(
             padding: const EdgeInsets.all(20),
@@ -360,7 +412,12 @@ class _DiscoverUserTileState extends State<DiscoverUserTile> {
         'requester_id': myId,
         'addressee_id': widget.user['id'],
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Request sent to ${widget.user['username']}!"), backgroundColor: Colors.green));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('friends.request_sent_to'.tr(namedArgs: {'name': widget.user['username'] ?? ''})),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
       setState(() => _status = 'NONE'); // Hata olursa eski haline döner
     }
@@ -380,8 +437,8 @@ class _DiscoverUserTileState extends State<DiscoverUserTile> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.user['username'] ?? 'Unknown', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                Text('Quitting ${widget.user['habit']}', style: const TextStyle(fontSize: 16, color: Colors.black54)),
+                Text(widget.user['username'] ?? 'common.unknown'.tr(), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                Text(_quittingLabel((widget.user['habit'] as String?) ?? ''), style: const TextStyle(fontSize: 16, color: Colors.black54)),
               ],
             ),
           ),

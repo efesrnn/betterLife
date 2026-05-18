@@ -3,6 +3,117 @@
     "name": "Better Life"
   },
 
+  "common": {
+    "loading": "Yükleniyor...",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "ok": "Tamam",
+    "next": "İleri",
+    "back": "Geri",
+    "logout": "Çıkış Yap",
+    "unknown": "Bilinmiyor",
+    "user": "KULLANICI"
+  },
+
+  "weekdays": {
+    "1": "PAZARTESİ",
+    "2": "SALI",
+    "3": "ÇARŞAMBA",
+    "4": "PERŞEMBE",
+    "5": "CUMA",
+    "6": "CUMARTESİ",
+    "7": "PAZAR"
+  },
+
+  "auth": {
+    "welcome_back": "TEKRAR HOŞ GELDİN",
+    "start_journey": "YOLCULUĞUNA BAŞLA",
+    "email": "E-posta",
+    "password": "Şifre",
+    "login": "GİRİŞ YAP",
+    "sign_up": "KAYIT OL",
+    "no_account_signup": "Hesabın yok mu? Buradan kayıt ol.",
+    "have_account_login": "Zaten hesabın var mı? Buradan giriş yap.",
+    "please_enter_credentials": "Lütfen e-posta ve şifre gir.",
+    "unexpected_error": "Beklenmedik bir hata oluştu."
+  },
+
+  "habit_setup": {
+    "choose_title": "ÜSTESİNDEN GELMEK İSTEDİĞİN\nALIŞKANLIĞI SEÇ",
+    "other_hint": "Diğer... (Yaz)",
+    "habits": {
+      "cigarettes": "Sigara",
+      "vapes": "Elektronik Sigara",
+      "alcohol": "Alkol",
+      "junk_food": "Abur Cubur",
+      "screen_time": "Ekran Süresi"
+    }
+  },
+
+  "goal_setup": {
+    "title": "Hedefin Ne?",
+    "reduce_by": "Şu kadar azalt: ",
+    "percentage_hint": "Yüzde",
+    "options": {
+      "quit_at_once": "Tek seferde tamamen bırak.",
+      "gradual_quit": "Kademeli azaltarak tamamen bırak.",
+      "reduce_step": "Kademeli azalt"
+    }
+  },
+
+  "username_setup": {
+    "title": "SANA NE\nDİYELİM?",
+    "hint": "Kullanıcı adı gir...",
+    "min_chars": "En az 3 karakter gerekli.",
+    "save_error": "Profil kaydedilirken bir hata oluştu."
+  },
+
+  "home": {
+    "checkin": {
+      "title": "Günlük Check-In",
+      "stayed_strong": "Hayır, dayandım!",
+      "save": "Kaydet",
+      "questions": {
+        "cigarettes": "Yokken sigara içtin mi?",
+        "alcohol": "Yokken alkol aldın mı?",
+        "vapes": "Yokken elektronik sigara kullandın mı?",
+        "junk_food": "Yokken abur cubur yedin mi?",
+        "screen_time": "Yokken ekran süresi kuralını kırdın mı?",
+        "generic": "Yokken {habit} ile ilgili kuralını bozdun mu?"
+      }
+    },
+    "labels": {
+      "cigarettes": "Bugün içilen\nsigara.",
+      "alcohol": "Bugün tüketilen\nalkol.",
+      "vapes": "Bugün çekilen\nelektronik sigara.",
+      "junk_food": "Bugün yenen\nabur cubur.",
+      "screen_time": "Bugünkü\nekran süresi.",
+      "generic": "Bugün\n{habit}."
+    },
+    "nav": {
+      "home": "Ana Sayfa",
+      "friends": "Arkadaşlar"
+    }
+  },
+
+  "friends": {
+    "title": "Arkadaşlar",
+    "search_hint": "Arkadaş bul...",
+    "no_friends_found": "Arkadaş bulunamadı.",
+    "quitting": "{habit} bırakıyor",
+    "requests_title": "Arkadaşlık İstekleri",
+    "no_requests": "Yeni istek yok.",
+    "discover_title": "Yeni İnsanlar Keşfet",
+    "no_users": "Henüz başka kullanıcı yok.",
+    "request_sent_to": "{name} kullanıcısına istek gönderildi!",
+    "request_accepted_notification": "🎉 {name} arkadaşlık isteğini kabul etti!",
+    "add": "Arkadaş Ekle",
+    "pending": "Bekleyen İstekler",
+    "accept": "Kabul Et",
+    "reject": "Reddet",
+    "request_sent": "İstek gönderildi"
+  },
+
   "habit_search": {
     "exact_match": "Bu alışkanlık zaten sistemde kayıtlı.",
     "maybe_match": "Benzer bir alışkanlık bulundu. Bunu mu demek istediniz?",
@@ -88,13 +199,5 @@
     "title": "Sıralama",
     "rank": "Sıra",
     "score": "Puan"
-  },
-
-  "friends": {
-    "add": "Arkadaş Ekle",
-    "pending": "Bekleyen İstekler",
-    "accept": "Kabul Et",
-    "reject": "Reddet",
-    "request_sent": "İstek gönderildi"
   }
 }

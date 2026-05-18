@@ -1,0 +1,203 @@
+{
+  "app": {
+    "name": "Better Life"
+  },
+
+  "common": {
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "ok": "OK",
+    "next": "Siguiente",
+    "back": "Atrás",
+    "logout": "Cerrar sesión",
+    "unknown": "Desconocido",
+    "user": "USUARIO"
+  },
+
+  "weekdays": {
+    "1": "LUNES",
+    "2": "MARTES",
+    "3": "MIÉRCOLES",
+    "4": "JUEVES",
+    "5": "VIERNES",
+    "6": "SÁBADO",
+    "7": "DOMINGO"
+  },
+
+  "auth": {
+    "welcome_back": "BIENVENIDO DE NUEVO",
+    "start_journey": "COMIENZA TU VIAJE",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "login": "INICIAR SESIÓN",
+    "sign_up": "REGISTRARSE",
+    "no_account_signup": "¿No tienes cuenta? Regístrate aquí.",
+    "have_account_login": "¿Ya tienes cuenta? Inicia sesión aquí.",
+    "please_enter_credentials": "Por favor introduce correo y contraseña.",
+    "unexpected_error": "Ocurrió un error inesperado."
+  },
+
+  "habit_setup": {
+    "choose_title": "ELIGE UN HÁBITO\nA SUPERAR",
+    "other_hint": "Otro... (Escríbelo)",
+    "habits": {
+      "cigarettes": "Cigarrillos",
+      "vapes": "Vapes",
+      "alcohol": "Alcohol",
+      "junk_food": "Comida chatarra",
+      "screen_time": "Tiempo de pantalla"
+    }
+  },
+
+  "goal_setup": {
+    "title": "¿Cuál es tu meta?",
+    "reduce_by": "Reducir en ",
+    "percentage_hint": "Porcentaje",
+    "options": {
+      "quit_at_once": "Dejarlo de una vez.",
+      "gradual_quit": "Dejarlo reduciendo paso\na paso.",
+      "reduce_step": "Reducir paso a paso"
+    }
+  },
+
+  "username_setup": {
+    "title": "¿CÓMO TE\nLLAMAMOS?",
+    "hint": "Introduce usuario...",
+    "min_chars": "Necesitas al menos 3 caracteres.",
+    "save_error": "Ocurrió un error al guardar el perfil."
+  },
+
+  "home": {
+    "checkin": {
+      "title": "Check-In Diario",
+      "stayed_strong": "¡No, aguanté!",
+      "save": "Guardar",
+      "questions": {
+        "cigarettes": "¿Fumaste algún cigarrillo mientras estuviste fuera?",
+        "alcohol": "¿Bebiste alcohol mientras estuviste fuera?",
+        "vapes": "¿Vapeaste mientras estuviste fuera?",
+        "junk_food": "¿Comiste comida chatarra mientras estuviste fuera?",
+        "screen_time": "¿Rompiste tu regla de tiempo de pantalla mientras estuviste fuera?",
+        "generic": "¿Caíste con {habit} mientras estuviste fuera?"
+      }
+    },
+    "labels": {
+      "cigarettes": "Cigarrillos fumados\nhoy.",
+      "alcohol": "Alcohol consumido\nhoy.",
+      "vapes": "Vapeadas\nhoy.",
+      "junk_food": "Comida chatarra\nhoy.",
+      "screen_time": "Tiempo de pantalla\nhoy.",
+      "generic": "{habit}\nhoy."
+    },
+    "nav": {
+      "home": "Inicio",
+      "friends": "Amigos"
+    }
+  },
+
+  "friends": {
+    "title": "Amigos",
+    "search_hint": "Buscar amigo...",
+    "no_friends_found": "No se encontraron amigos.",
+    "quitting": "Dejando {habit}",
+    "requests_title": "Solicitudes de Amistad",
+    "no_requests": "No hay solicitudes nuevas.",
+    "discover_title": "Descubre Personas",
+    "no_users": "Aún no hay otros usuarios.",
+    "request_sent_to": "¡Solicitud enviada a {name}!",
+    "request_accepted_notification": "🎉 ¡{name} aceptó tu solicitud de amistad!",
+    "add": "Añadir amigo",
+    "pending": "Solicitudes pendientes",
+    "accept": "Aceptar",
+    "reject": "Rechazar",
+    "request_sent": "Solicitud enviada"
+  },
+
+  "habit_search": {
+    "exact_match": "Este hábito ya existe en el sistema.",
+    "maybe_match": "Se encontró un hábito similar. ¿Quisiste decir esto?",
+    "invalid_habit": "No se pudo identificar como un hábito válido.",
+    "new_habit_created": "Nuevo hábito creado con éxito."
+  },
+
+  "errors": {
+    "input_required": "Se requiere entrada (mín. 2 caracteres)",
+    "missing_auth": "Falta el encabezado de autorización",
+    "unauthorized": "No autorizado",
+    "fields_required": "Hábito y valor son obligatorios",
+    "invalid_value": "El valor debe ser un número no negativo",
+    "habit_not_found": "Hábito no encontrado",
+    "not_your_habit": "Este hábito no te pertenece",
+    "habit_paused": "Este hábito está pausado",
+    "invalid_activities": "Las entradas de actividad deben ser un arreglo",
+    "invalid_activity_entry": "Cada entrada de actividad debe tener slug, valor y unidad",
+    "already_logged_today": "Ya se registró hoy para este hábito",
+    "user_habit_not_found": "Hábito de usuario no encontrado",
+    "habit_is_paused": "Este hábito está pausado",
+    "internal_error": "Error interno del servidor",
+    "combo_check_failed": "Falló la verificación de combo"
+  },
+
+  "combo": {
+    "need_at_least_2": "Se necesitan al menos 2 rachas activas para el bono combo",
+    "cooldown_active": "Próximo bono combo en {} días",
+    "bonus_awarded": "¡+{} puntos de bono combo ganados!"
+  },
+
+  "program_types": {
+    "QUIT": "Dejar",
+    "GRADUAL_DECREASE": "Disminución Gradual",
+    "REDUCE": "Reducir",
+    "GRADUAL_INCREASE": "Aumento Gradual",
+    "MAINTAIN": "Mantener"
+  },
+
+  "categories": {
+    "ADDICTION": "Adicción",
+    "FITNESS": "Fitness",
+    "NUTRITION": "Nutrición",
+    "MENTAL": "Mental",
+    "HEALTH": "Salud",
+    "DIGITAL_WELLNESS": "Bienestar Digital"
+  },
+
+  "risk_levels": {
+    "LOW": "Bajo",
+    "MEDIUM": "Medio",
+    "HIGH": "Alto",
+    "CRITICAL": "Crítico"
+  },
+
+  "scoring": {
+    "base_points": "Puntos Base",
+    "streak_bonus": "Bono de Racha",
+    "effort_bonus": "Bono de Esfuerzo",
+    "activity_bonus": "Bono de Actividad",
+    "penalty": "Penalización",
+    "milestone_bonus": "Bono de Hito",
+    "combo_bonus": "Bono Combo",
+    "total": "Total"
+  },
+
+  "streak": {
+    "current": "Racha actual",
+    "longest": "Racha más larga",
+    "days": "{} días"
+  },
+
+  "dashboard": {
+    "total_score": "Puntuación Total",
+    "weekly_score": "Puntuación Semanal",
+    "active_habits": "Hábitos Activos",
+    "logged_today": "Completado hoy",
+    "not_logged": "No registrado hoy",
+    "combo_next_bonus": "Próximo bono combo: {} días"
+  },
+
+  "leaderboard": {
+    "title": "Clasificación",
+    "rank": "Posición",
+    "score": "Puntuación"
+  }
+}

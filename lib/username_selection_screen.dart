@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'home_screen.dart'; // Ana sayfa yönlendirmesi için
 
@@ -71,7 +72,9 @@ class _UsernameSelectionScreenState extends State<UsernameSelectionScreen> {
     } on AuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: Colors.red));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('An error occurred while saving profile.'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('username_setup.save_error'.tr()), backgroundColor: Colors.red),
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -94,10 +97,10 @@ class _UsernameSelectionScreenState extends State<UsernameSelectionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Text(
-                'WHAT SHOULD WE\nCALL YOU?',
+              Text(
+                'username_setup.title'.tr(),
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 1.2),
               ),
               const SizedBox(height: 50),
               Container(
@@ -114,18 +117,18 @@ class _UsernameSelectionScreenState extends State<UsernameSelectionScreen> {
                       _isReadyToProceed = text.trim().length >= 3;
                     });
                   },
-                  decoration: const InputDecoration(
-                    hintText: 'Enter username...',
-                    hintStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.black38),
+                  decoration: InputDecoration(
+                    hintText: 'username_setup.hint'.tr(),
+                    hintStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black38),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                "You need at least 3 characters.",
-                style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
+              Text(
+                'username_setup.min_chars'.tr(),
+                style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 60),
               _isLoading

@@ -3,6 +3,117 @@
     "name": "Better Life"
   },
 
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "next": "Next",
+    "back": "Back",
+    "logout": "Logout",
+    "unknown": "Unknown",
+    "user": "USER"
+  },
+
+  "weekdays": {
+    "1": "MONDAY",
+    "2": "TUESDAY",
+    "3": "WEDNESDAY",
+    "4": "THURSDAY",
+    "5": "FRIDAY",
+    "6": "SATURDAY",
+    "7": "SUNDAY"
+  },
+
+  "auth": {
+    "welcome_back": "WELCOME BACK",
+    "start_journey": "START YOUR JOURNEY",
+    "email": "Email",
+    "password": "Password",
+    "login": "LOGIN",
+    "sign_up": "SIGN UP",
+    "no_account_signup": "Don't have an account? Sign up here.",
+    "have_account_login": "Already have an account? Login here.",
+    "please_enter_credentials": "Please enter email and password.",
+    "unexpected_error": "An unexpected error occurred."
+  },
+
+  "habit_setup": {
+    "choose_title": "CHOOSE A HABIT TO\nOVERCOME WITH",
+    "other_hint": "Other... (Type in)",
+    "habits": {
+      "cigarettes": "Cigarettes",
+      "vapes": "Vapes",
+      "alcohol": "Alcohol",
+      "junk_food": "Junk Food",
+      "screen_time": "Screen Time"
+    }
+  },
+
+  "goal_setup": {
+    "title": "What's Your Goal?",
+    "reduce_by": "Reduce by ",
+    "percentage_hint": "Percentage",
+    "options": {
+      "quit_at_once": "Fully quit in once.",
+      "gradual_quit": "Fully quit by reducing step\nby step.",
+      "reduce_step": "Reduce step by step"
+    }
+  },
+
+  "username_setup": {
+    "title": "WHAT SHOULD WE\nCALL YOU?",
+    "hint": "Enter username...",
+    "min_chars": "You need at least 3 characters.",
+    "save_error": "An error occurred while saving profile."
+  },
+
+  "home": {
+    "checkin": {
+      "title": "Daily Check-In",
+      "stayed_strong": "No, I stayed strong!",
+      "save": "Save",
+      "questions": {
+        "cigarettes": "Did you smoke any cigarettes since you were away?",
+        "alcohol": "Did you drink any alcohol since you were away?",
+        "vapes": "Did you vape since you were away?",
+        "junk_food": "Did you eat any junk food since you were away?",
+        "screen_time": "Did you break your screen time rule since you were away?",
+        "generic": "Did you slip up with {habit} since you were away?"
+      }
+    },
+    "labels": {
+      "cigarettes": "Cigarettes smoked\ntoday.",
+      "alcohol": "Alcohol consumed\ntoday.",
+      "vapes": "Vapes hit\ntoday.",
+      "junk_food": "Junk food eaten\ntoday.",
+      "screen_time": "Screen time\ntoday.",
+      "generic": "{habit}\ntoday."
+    },
+    "nav": {
+      "home": "Home",
+      "friends": "Friends"
+    }
+  },
+
+  "friends": {
+    "title": "Friends",
+    "search_hint": "Find friend...",
+    "no_friends_found": "No friends found.",
+    "quitting": "Quitting {habit}",
+    "requests_title": "Friend Requests",
+    "no_requests": "No new requests.",
+    "discover_title": "Discover People",
+    "no_users": "No other users found yet.",
+    "request_sent_to": "Request sent to {name}!",
+    "request_accepted_notification": "🎉 {name} accepted your friend request!",
+    "add": "Add Friend",
+    "pending": "Pending Requests",
+    "accept": "Accept",
+    "reject": "Reject",
+    "request_sent": "Request sent"
+  },
+
   "habit_search": {
     "exact_match": "This habit already exists in the system.",
     "maybe_match": "A similar habit was found. Did you mean this?",
@@ -88,13 +199,5 @@
     "title": "Leaderboard",
     "rank": "Rank",
     "score": "Score"
-  },
-
-  "friends": {
-    "add": "Add Friend",
-    "pending": "Pending Requests",
-    "accept": "Accept",
-    "reject": "Reject",
-    "request_sent": "Request sent"
   }
 }

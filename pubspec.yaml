@@ -37,6 +37,14 @@ dependencies:
   supabase_flutter: ^2.9.0
   shared_preferences: ^2.5.5
 
+  # i18n — UI metinleri assets/translations/*.json içinde tutulur,
+  # backend hata mesajları (HabitQuestException.messageKey) bu key'lerle .tr() üzerinden çevrilir.
+  easy_localization: ^3.0.7
+
+  # Ortam değişkenleri (.env) — GEMINI_API_KEY gibi gizli anahtarlar burada tutulur.
+  # .env dosyası .gitignore'da; sadece .env.example commit edilir.
+  flutter_dotenv: ^5.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -58,6 +66,11 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # easy_localization, flutter_dotenv için asset kayıtları
+  assets:
+    - assets/translations/
+    - .env
 
   # To add assets to your application, add an assets section, like this:
   # assets:
