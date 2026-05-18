@@ -121,6 +121,24 @@
     "new_habit_created": "New habit created successfully."
   },
 
+  "gemini": {
+    "evaluating": "AI is evaluating the habit...",
+    "unavailable": "AI service is currently unavailable. Please pick a habit from the list.",
+    "invalid_title": "Not recognized as a valid habit",
+    "invalid_default": "Could not be identified as a valid harmful habit.",
+    "confirm_title": "Add this habit?",
+    "confirm_subtitle": "AI evaluation",
+    "confirm_add": "Add",
+    "confirm_cancel": "Cancel",
+    "scores": {
+      "daily": "Daily points",
+      "health": "Health impact",
+      "social": "Social impact",
+      "financial": "Financial impact",
+      "addiction": "Addiction level"
+    }
+  },
+
   "errors": {
     "input_required": "Input is required (min 2 characters)",
     "missing_auth": "Missing authorization header",

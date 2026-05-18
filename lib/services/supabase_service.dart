@@ -138,6 +138,18 @@ class SupabaseService {
     return HabitCategory.fromJson(row);
   }
 
+  /// UI slug ('cigarettes', 'vapes', ...) ile kategori bulur.
+  /// Migration v2'den sonra seed satırlarının hepsinde slug vardır.
+  Future<HabitCategory?> findHabitCategoryBySlug(String slug) async {
+    final row = await _client
+        .from('habit_categories')
+        .select()
+        .eq('slug', slug)
+        .maybeSingle();
+    if (row == null) return null;
+    return HabitCategory.fromJson(row);
+  }
+
   Future<HabitCategory> createHabitCategory(HabitCategory category) async {
     final row = await _client
         .from('habit_categories')
@@ -170,6 +182,16 @@ class SupabaseService {
         .from('activity_categories')
         .select()
         .ilike('name', name)
+        .maybeSingle();
+    if (row == null) return null;
+    return ActivityCategory.fromJson(row);
+  }
+
+  Future<ActivityCategory?> findActivityCategoryBySlug(String slug) async {
+    final row = await _client
+        .from('activity_categories')
+        .select()
+        .eq('slug', slug)
         .maybeSingle();
     if (row == null) return null;
     return ActivityCategory.fromJson(row);

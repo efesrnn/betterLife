@@ -121,6 +121,24 @@
     "new_habit_created": "Yeni alışkanlık başarıyla oluşturuldu."
   },
 
+  "gemini": {
+    "evaluating": "AI alışkanlığı değerlendiriyor...",
+    "unavailable": "AI servisi şu an kullanılamıyor. Lütfen listeden bir alışkanlık seç.",
+    "invalid_title": "Bu geçerli bir alışkanlık olarak değerlendirilmedi",
+    "invalid_default": "Geçerli bir zararlı alışkanlık olarak tanımlanamadı.",
+    "confirm_title": "Bu alışkanlığı ekleyelim mi?",
+    "confirm_subtitle": "AI değerlendirmesi",
+    "confirm_add": "Ekle",
+    "confirm_cancel": "Vazgeç",
+    "scores": {
+      "daily": "Günlük puan",
+      "health": "Sağlık etkisi",
+      "social": "Sosyal etki",
+      "financial": "Finansal etki",
+      "addiction": "Bağımlılık seviyesi"
+    }
+  },
+
   "errors": {
     "input_required": "Girdi gerekli (en az 2 karakter)",
     "missing_auth": "Yetkilendirme başlığı eksik",

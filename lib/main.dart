@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_options.dart';
+import 'services/service_locator.dart';
 import 'auth_gate.dart';
 
 Future<void> main() async {
@@ -17,8 +18,8 @@ Future<void> main() async {
   try {
     await dotenv.load(fileName: ".env");
   } catch (_) {
-    // .env yoksa sessizce geç — şu an UI Gemini'yi doğrudan çağırmıyor,
-    // tüm AI işlemleri Supabase Edge Functions üzerinden gidiyor.
+    // .env yoksa sessizce geç — GeminiService devre dışı kalır,
+    // built-in alışkanlıklar (cigarettes, alcohol, vb.) yine çalışır.
   }
 
   // 3) Supabase
@@ -26,6 +27,9 @@ Future<void> main() async {
     url: supabaseUrl,
     anonKey: supabaseAnonKey,
   );
+
+  // 4) ServiceLocator — GeminiService gibi API key isteyen servisleri init eder.
+  await ServiceLocator.instance.init();
 
   runApp(
     EasyLocalization(

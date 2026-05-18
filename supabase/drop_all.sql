@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS public.user_achievements CASCADE;
+DROP TABLE IF EXISTS public.achievements CASCADE;
+DROP TABLE IF EXISTS public.activity_logs CASCADE;
+DROP TABLE IF EXISTS public.habit_logs CASCADE;
+DROP TABLE IF EXISTS public.user_habits CASCADE;
+DROP TABLE IF EXISTS public.activity_categories CASCADE;
+DROP TABLE IF EXISTS public.habit_categories CASCADE;
+DROP TABLE IF EXISTS public.friendships CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;

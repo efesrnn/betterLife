@@ -110,6 +110,7 @@ class Profile {
 
 class HabitCategory {
   final int? id;
+  final String? slug;
   final String name;
   final String? description;
   final String iconName;
@@ -126,6 +127,7 @@ class HabitCategory {
 
   HabitCategory({
     this.id,
+    this.slug,
     required this.name,
     this.description,
     this.iconName = 'block',
@@ -146,6 +148,7 @@ class HabitCategory {
   factory HabitCategory.fromJson(Map<String, dynamic> json) {
     return HabitCategory(
       id: (json['id'] as num?)?.toInt(),
+      slug: json['slug'] as String?,
       name: json['name'] as String,
       description: json['description'] as String?,
       iconName: json['icon_name'] as String? ?? 'block',
@@ -163,6 +166,7 @@ class HabitCategory {
   }
 
   Map<String, dynamic> toInsertJson() => {
+        if (slug != null) 'slug': slug,
         'name': name,
         if (description != null) 'description': description,
         'icon_name': iconName,
@@ -184,6 +188,7 @@ class HabitCategory {
 
 class ActivityCategory {
   final int? id;
+  final String? slug;
   final String name;
   final String? description;
   final String iconName;
@@ -201,6 +206,7 @@ class ActivityCategory {
 
   ActivityCategory({
     this.id,
+    this.slug,
     required this.name,
     this.description,
     this.iconName = 'fitness_center',
@@ -222,6 +228,7 @@ class ActivityCategory {
   factory ActivityCategory.fromJson(Map<String, dynamic> json) {
     return ActivityCategory(
       id: (json['id'] as num?)?.toInt(),
+      slug: json['slug'] as String?,
       name: json['name'] as String,
       description: json['description'] as String?,
       iconName: json['icon_name'] as String? ?? 'fitness_center',
@@ -242,6 +249,7 @@ class ActivityCategory {
   }
 
   Map<String, dynamic> toInsertJson() => {
+        if (slug != null) 'slug': slug,
         'name': name,
         if (description != null) 'description': description,
         'icon_name': iconName,

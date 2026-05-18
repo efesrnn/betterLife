@@ -121,6 +121,24 @@
     "new_habit_created": "Nuevo hábito creado con éxito."
   },
 
+  "gemini": {
+    "evaluating": "La IA está evaluando el hábito...",
+    "unavailable": "El servicio de IA no está disponible. Por favor elige un hábito de la lista.",
+    "invalid_title": "No reconocido como un hábito válido",
+    "invalid_default": "No se pudo identificar como un hábito dañino válido.",
+    "confirm_title": "¿Añadir este hábito?",
+    "confirm_subtitle": "Evaluación de IA",
+    "confirm_add": "Añadir",
+    "confirm_cancel": "Cancelar",
+    "scores": {
+      "daily": "Puntos diarios",
+      "health": "Impacto en la salud",
+      "social": "Impacto social",
+      "financial": "Impacto financiero",
+      "addiction": "Nivel de adicción"
+    }
+  },
+
   "errors": {
     "input_required": "Se requiere entrada (mín. 2 caracteres)",
     "missing_auth": "Falta el encabezado de autorización",
