@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'home_screen.dart'; // Ana sayfa yönlendirmesi için
+import 'home_screen.dart';
 
 class UsernameSelectionScreen extends StatefulWidget {
   final String selectedHabit;
@@ -29,7 +29,6 @@ class _UsernameSelectionScreenState extends State<UsernameSelectionScreen> {
     super.dispose();
   }
 
-  // Ok tuşuna basıldığında çalışacak Supabase Kayıt Fonksiyonu
   Future<void> _saveUsernameAndProceed() async {
     final username = _usernameController.text.trim();
 
@@ -39,28 +38,24 @@ class _UsernameSelectionScreenState extends State<UsernameSelectionScreen> {
       final user = supabase.auth.currentUser;
       if (user == null) throw Exception('User not found');
 
-      // 1. Auth Metadata'ya kaydediyoruz (Kendi yerel işlemleri için)
       await supabase.auth.updateUser(
         UserAttributes(
           data: {
             'username': username,
             'habit': widget.selectedHabit,
             'goal': widget.selectedGoal,
-            'is_setup_complete': true, // Kurulum bitti işareti
+            'is_setup_complete': true,
           },
         ),
       );
 
-      // 2. Takım arkadaşının kurduğu public.profiles tablosuna kaydediyoruz!
-      // (Böylece Discover sayfasında diğer insanlar bizi bulabilecek)
       await supabase.from('profiles').upsert({
-        'id': user.id, // Kullanıcının benzersiz ID'si
+        'id': user.id,
         'username': username,
         'habit': widget.selectedHabit,
         'goal': widget.selectedGoal,
       });
 
-      // 3. İşlem başarılıysa Ana Ekrana (Home) geçiş yap
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
@@ -71,7 +66,7 @@ class _UsernameSelectionScreenState extends State<UsernameSelectionScreen> {
     } on AuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: Colors.red));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('An error occurred while saving profile.'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -110,7 +105,6 @@ class _UsernameSelectionScreenState extends State<UsernameSelectionScreen> {
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   onChanged: (text) {
                     setState(() {
-                      // Takım arkadaşının yazdığı kurala göre isim en az 3 harf olmalı
                       _isReadyToProceed = text.trim().length >= 3;
                     });
                   },
