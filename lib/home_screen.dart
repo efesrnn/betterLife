@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 import 'auth_screen.dart';
 import 'friends_screen.dart';
 import 'lungs_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,7 +17,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final supabase = Supabase.instance.client;
   Map<String, dynamic> _userData = {};
-  String _email = '';
 
   int _dailyCount = 0;
   String _todayDateStr = '';
@@ -27,6 +28,9 @@ class _HomeScreenState extends State<HomeScreen> {
   int _dailyBaseline = 20;
   double _totalSaved = 0.0;
   double _lungScore = 10.0;
+  String? _avatarUrl;
+
+  DateTime _quitDate = DateTime.now();
 
   @override
   void initState() {
@@ -51,6 +55,17 @@ class _HomeScreenState extends State<HomeScreen> {
     _todayDateStr = '$day / $month / $year';
     const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
     _todayDayName = days[now.weekday - 1];
+  }
+
+  int _getStreak() {
+    if (_dailyCount > 0) return 0;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final quit = DateTime(_quitDate.year, _quitDate.month, _quitDate.day);
+
+    int streak = today.difference(quit).inDays;
+    return streak < 0 ? 0 : streak;
   }
 
   Future<void> _checkTwoMonthUpdateReminder() async {
@@ -89,6 +104,15 @@ class _HomeScreenState extends State<HomeScreen> {
         _dailyCount = prefs.getInt(userCountKey) ?? 0;
       });
     } else {
+      int yesterdaysCount = prefs.getInt(userCountKey) ?? 0;
+      if (yesterdaysCount > 0) {
+        _quitDate = DateTime(now.year, now.month, now.day);
+        await prefs.setString('quit_date_$userId', _quitDate.toIso8601String());
+        try {
+          await supabase.from('profiles').update({'quit_date': _quitDate.toIso8601String()}).eq('id', userId);
+        } catch (_) {}
+      }
+
       double pastTotal = _totalSaved;
       await prefs.setDouble('past_total_saved_$userId', pastTotal);
 
@@ -166,13 +190,16 @@ class _HomeScreenState extends State<HomeScreen> {
       final prefs = await SharedPreferences.getInstance();
 
       setState(() {
-        _email = user.email ?? '';
         _userData = user.userMetadata ?? {};
         _packPrice = prefs.getDouble('pack_price_${user.id}') ?? 115.0;
         _packSize = prefs.getInt('pack_size_${user.id}') ?? 20;
         _dailyBaseline = prefs.getInt('daily_baseline_${user.id}') ?? 20;
         _totalSaved = prefs.getDouble('total_saved_${user.id}') ?? 0.0;
         _lungScore = prefs.getDouble('lung_score_${user.id}') ?? 10.0;
+        _avatarUrl = prefs.getString('avatar_url_${user.id}');
+
+        String? quitStr = prefs.getString('quit_date_${user.id}');
+        if (quitStr != null) _quitDate = DateTime.parse(quitStr);
       });
 
       try {
@@ -184,12 +211,27 @@ class _HomeScreenState extends State<HomeScreen> {
             if (profile['daily_baseline'] != null) _dailyBaseline = profile['daily_baseline'];
             if (profile['total_saved'] != null) _totalSaved = (profile['total_saved']).toDouble();
             if (profile['lung_score'] != null) _lungScore = (profile['lung_score']).toDouble();
+            _avatarUrl = profile['avatar_url'];
+
+            if (profile['quit_date'] != null) {
+              _quitDate = DateTime.parse(profile['quit_date']);
+            } else if (prefs.getString('quit_date_${user.id}') == null) {
+              _quitDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+            }
           });
+
           await prefs.setDouble('pack_price_${user.id}', _packPrice);
           await prefs.setInt('pack_size_${user.id}', _packSize);
           await prefs.setInt('daily_baseline_${user.id}', _dailyBaseline);
           await prefs.setDouble('total_saved_${user.id}', _totalSaved);
           await prefs.setDouble('lung_score_${user.id}', _lungScore);
+          await prefs.setString('quit_date_${user.id}', _quitDate.toIso8601String());
+
+          if (_avatarUrl != null) {
+            await prefs.setString('avatar_url_${user.id}', _avatarUrl!);
+          } else {
+            await prefs.remove('avatar_url_${user.id}');
+          }
         }
       } catch (e) {
         debugPrint("DB Error: $e");
@@ -209,6 +251,52 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       _loadDailyCount();
+    }
+  }
+
+  Future<void> _uploadAvatar() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
+
+    if (image == null) return;
+
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Uploading photo...')));
+
+      final bytes = await image.readAsBytes();
+      final fileExtension = image.path.split('.').last;
+      final fileName = '${user.id}_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
+
+      await supabase.storage.from('avatars').uploadBinary(
+        fileName,
+        bytes,
+        fileOptions: const FileOptions(upsert: true),
+      );
+
+      final imageUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
+
+      await supabase.from('profiles').update({'avatar_url': imageUrl}).eq('id', user.id);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('avatar_url_${user.id}', imageUrl);
+
+      setState(() => _avatarUrl = imageUrl);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile photo updated!'), backgroundColor: Colors.green));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error uploading: $e'), backgroundColor: Colors.red));
+      }
     }
   }
 
@@ -387,6 +475,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final habit = _userData['habit'] ?? 'Habit';
     final isCigarette = habit.toString().toLowerCase().contains('cigarette');
+    int currentStreak = _getStreak();
 
     final List<Widget> _screens = [
       _buildHomeTab(habit),
@@ -410,14 +499,52 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             DrawerHeader(
               decoration: const BoxDecoration(color: Colors.black),
+              margin: EdgeInsets.zero,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.account_circle, size: 60, color: Colors.white),
-                  const SizedBox(height: 10),
-                  Text(_userData['username']?.toString().toUpperCase() ?? 'USER', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                  Text(_email, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                  GestureDetector(
+                    onTap: _uploadAvatar,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 32,
+                          backgroundColor: Colors.white24,
+                          backgroundImage: _avatarUrl != null ? NetworkImage(_avatarUrl!) : null,
+                          child: _avatarUrl == null ? const Icon(Icons.account_circle, size: 64, color: Colors.white) : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                            child: const Icon(Icons.camera_alt, size: 14, color: Colors.black),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _userData['username']?.toString().toUpperCase() ?? 'USER',
+                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        currentStreak > 0 ? '$currentStreak DAYS STREAK' : '0 DAYS STREAK',
+                        style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                      if (currentStreak >= 1) ...[
+                        const SizedBox(width: 8),
+                        const AnimatedFlame(),
+                      ]
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -431,6 +558,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
             const Divider(color: Colors.black26, thickness: 1),
+            ListTile(
+              leading: const Icon(Icons.settings, color: Colors.black, size: 30),
+              title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                ).then((_) {
+                  _loadUserData();
+                });
+              },
+            ),
             ListTile(leading: const Icon(Icons.logout, color: Colors.red, size: 30), title: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18)), onTap: _logout),
           ],
         ),
@@ -515,6 +655,49 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class AnimatedFlame extends StatefulWidget {
+  const AnimatedFlame({super.key});
+
+  @override
+  State<AnimatedFlame> createState() => _AnimatedFlameState();
+}
+
+class _AnimatedFlameState extends State<AnimatedFlame> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: const Icon(
+        Icons.local_fire_department,
+        color: Colors.orangeAccent,
+        size: 22,
       ),
     );
   }
