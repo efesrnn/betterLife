@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+const Color _bg = Color(0xFF0F172A);
+const Color _card = Color(0xFF1E293B);
+const Color _border = Color(0xFF334155);
+const Color _accent = Color(0xFF818CF8);
+const Color _sub = Color(0xFF94A3B8);
+
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -56,9 +62,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (user != null) {
         await supabase.from('profiles').update({'username': newUsername}).eq('id', user.id);
         await supabase.auth.updateUser(UserAttributes(data: {'username': newUsername}));
-
         setState(() => _currentUsername = newUsername);
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Username updated successfully!'), backgroundColor: Colors.green));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Username updated!'), backgroundColor: Colors.green));
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
@@ -79,7 +84,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await supabase.auth.updateUser(UserAttributes(password: newPassword));
       _passwordController.clear();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated successfully!'), backgroundColor: Colors.green));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated!'), backgroundColor: Colors.green));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
     } finally {
@@ -90,85 +95,143 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-        title: const Text('Settings', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 24)),
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('Settings', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('ACCOUNT INFO', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-            const SizedBox(height: 20),
+            _sectionLabel('ACCOUNT INFO'),
+            const SizedBox(height: 12),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(color: Colors.grey.shade200, border: Border.all(color: Colors.black, width: 2)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _card,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _border, width: 1),
+              ),
+              child: Row(
                 children: [
-                  const Text('Email Address', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black54)),
-                  const SizedBox(height: 5),
-                  Text(_email, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: _accent.withAlpha(30),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.email_outlined, color: _accent, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Email Address', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _sub)),
+                        const SizedBox(height: 2),
+                        Text(_email, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 40),
-            const Text('CHANGE USERNAME', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-            const SizedBox(height: 20),
-            TextField(
+            const SizedBox(height: 32),
+            _sectionLabel('CHANGE USERNAME'),
+            const SizedBox(height: 12),
+            _darkField(
               controller: _usernameController,
-              decoration: const InputDecoration(
-                labelText: 'New Username',
-                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black, width: 2)),
-                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black, width: 2)),
-                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black, width: 3)),
-              ),
+              label: 'New Username',
+              icon: Icons.person_outline_rounded,
             ),
-            const SizedBox(height: 15),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white),
-                onPressed: _isLoading ? null : _updateUsername,
-                child: _isLoading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text('Save Username', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
+            const SizedBox(height: 12),
+            _actionButton(
+              label: 'Save Username',
+              onPressed: _isLoading ? null : _updateUsername,
+              isLoading: _isLoading,
             ),
-            const SizedBox(height: 40),
-            const Text('CHANGE PASSWORD', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-            const SizedBox(height: 20),
-            TextField(
+            const SizedBox(height: 32),
+            _sectionLabel('CHANGE PASSWORD'),
+            const SizedBox(height: 12),
+            _darkField(
               controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'New Password',
-                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black, width: 2)),
-                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black, width: 2)),
-                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black, width: 3)),
-              ),
+              label: 'New Password',
+              icon: Icons.lock_outline_rounded,
+              obscure: true,
             ),
-            const SizedBox(height: 15),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white),
-                onPressed: _isLoading ? null : _updatePassword,
-                child: _isLoading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text('Save New Password', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
+            const SizedBox(height: 12),
+            _actionButton(
+              label: 'Save New Password',
+              onPressed: _isLoading ? null : _updatePassword,
+              isLoading: _isLoading,
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: _sub,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 2.5,
+      ),
+    );
+  }
+
+  Widget _darkField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool obscure = false,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: _sub),
+        prefixIcon: Icon(icon, color: _sub, size: 20),
+        filled: true,
+        fillColor: _card,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _accent),
+        ),
+      ),
+    );
+  }
+
+  Widget _actionButton({required String label, required VoidCallback? onPressed, required bool isLoading}) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _accent,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          disabledBackgroundColor: _border,
+        ),
+        onPressed: onPressed,
+        child: isLoading
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            : Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
       ),
     );
   }

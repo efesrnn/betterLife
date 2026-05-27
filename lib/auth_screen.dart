@@ -3,6 +3,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'habit_selection_screen.dart';
 import 'home_screen.dart';
 
+const Color _bg = Color(0xFF0F172A);
+const Color _card = Color(0xFF1E293B);
+const Color _border = Color(0xFF334155);
+const Color _accent = Color(0xFF818CF8);
+const Color _sub = Color(0xFF94A3B8);
+
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -11,14 +17,11 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  // Bu değişken true ise Login, false ise Sign Up ekranı gösterilir
   bool _isLogin = true;
   bool _isLoading = false;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  // Supabase bağlantımızı alıyoruz
   final supabase = Supabase.instance.client;
 
   @override
@@ -28,7 +31,6 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  // Giriş Yapma / Kayıt Olma Fonksiyonu
   Future<void> _authenticate() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -44,149 +46,141 @@ class _AuthScreenState extends State<AuthScreen> {
 
     try {
       if (_isLogin) {
-        // Supabase Giriş İşlemi
         await supabase.auth.signInWithPassword(email: email, password: password);
       } else {
-        // Supabase Kayıt İşlemi
         await supabase.auth.signUp(email: email, password: password);
       }
 
       if (mounted) {
-        // İşlem başarılı olduktan sonra kullanıcının verilerini (metadata) çekiyoruz
         final user = supabase.auth.currentUser;
         final isSetupComplete = user?.userMetadata?['is_setup_complete'] ?? false;
 
-        // Akıllı Yönlendirme (Auth Gate mantığı)
-        if (isSetupComplete) {
-          // Eğer önceden kurulumu tamamlamış (is_setup_complete: true) biriyse doğrudan Ana Sayfaya at
-          Navigator.pushReplacement(
-            context,
-            // BURASI DEĞİŞTİ: DummyHomeScreen yerine HomeScreen yazıyoruz
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        } else {
-          // Yeni kayıt olmuşsa veya kurulumu yarım bırakmışsa en baştan Alışkanlık seçimine at
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HabitSelectionScreen()),
-          );
-        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => isSetupComplete ? const HomeScreen() : const HabitSelectionScreen(),
+          ),
+        );
       }
     } on AuthException catch (e) {
-      // Supabase'den gelen hatalar (örn: yanlış şifre)
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
-      );
-    } catch (e) {
-      // Diğer hatalar
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('An unexpected error occurred.'), backgroundColor: Colors.red),
-      );
-    } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: Colors.red));
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('An unexpected error occurred.'), backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: _bg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 1. Oval "Better Life" Logosu
+                // Logo
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black87, width: 3),
-                    borderRadius: const BorderRadius.all(Radius.elliptical(150, 70)),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF4338CA), Color(0xFF1E293B)],
+                    ),
+                    borderRadius: BorderRadius.circular(50),
+                    border: Border.all(color: _accent.withAlpha(80), width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _accent.withAlpha(40),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
                   child: const Text(
                     'Better Life',
                     style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1,
                     ),
                   ),
                 ),
-                const SizedBox(height: 50),
+                const SizedBox(height: 48),
 
-                // 2. Başlık Metni
                 Text(
                   _isLogin ? 'WELCOME BACK' : 'START YOUR JOURNEY',
                   style: const TextStyle(
-                    fontSize: 24,
+                    color: Colors.white,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
+                    letterSpacing: 2,
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 8),
+                Text(
+                  _isLogin ? 'Sign in to your account' : 'Create a free account',
+                  style: const TextStyle(color: _sub, fontSize: 14),
+                ),
+                const SizedBox(height: 36),
 
-                // 3. Email Kutusu
                 _buildTextField(
                   controller: _emailController,
                   hintText: 'Email',
                   icon: Icons.email_outlined,
                   obscureText: false,
                 ),
-                const SizedBox(height: 20),
-
-                // 4. Şifre Kutusu
+                const SizedBox(height: 14),
                 _buildTextField(
                   controller: _passwordController,
                   hintText: 'Password',
-                  icon: Icons.lock_outline,
+                  icon: Icons.lock_outline_rounded,
                   obscureText: true,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 28),
 
-                // 5. Giriş / Kayıt Butonu
                 SizedBox(
                   width: double.infinity,
-                  height: 55,
+                  height: 54,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _authenticate,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black, // Siyah buton
-                      foregroundColor: Colors.white, // Beyaz yazı
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(0), // Tasarımımıza uygun köşeli
-                        side: const BorderSide(color: Colors.black, width: 2),
-                      ),
+                      backgroundColor: _accent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
                     ),
                     child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
                         : Text(
-                      _isLogin ? 'LOGIN' : 'SIGN UP',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-                    ),
+                            _isLogin ? 'LOGIN' : 'SIGN UP',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 1.5),
+                          ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
 
-                // 6. Sayfa Değiştirme Butonu (Login <-> Sign up)
                 TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _isLogin = !_isLogin; // Modu değiştir
-                    });
-                  },
-                  child: Text(
-                    _isLogin
-                        ? "Don't have an account? Sign up here."
-                        : "Already have an account? Login here.",
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline,
+                  onPressed: () => setState(() => _isLogin = !_isLogin),
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(fontSize: 14, color: _sub),
+                      children: [
+                        TextSpan(text: _isLogin ? "Don't have an account? " : "Already have an account? "),
+                        TextSpan(
+                          text: _isLogin ? 'Sign up' : 'Login',
+                          style: const TextStyle(color: _accent, fontWeight: FontWeight.w700),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -198,28 +192,31 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  // Tasarımımıza uygun kalın çerçeveli TextField oluşturan yardımcı widget
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,
     required IconData icon,
     required bool obscureText,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black87, width: 2),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: Colors.black87),
-          hintText: hintText,
-          hintStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 15),
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+      decoration: InputDecoration(
+        prefixIcon: Icon(icon, color: _sub, size: 20),
+        hintText: hintText,
+        hintStyle: const TextStyle(color: _sub),
+        filled: true,
+        fillColor: _card,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _border),
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _accent, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 16),
       ),
     );
   }

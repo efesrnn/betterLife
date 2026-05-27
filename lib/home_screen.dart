@@ -7,6 +7,13 @@ import 'friends_screen.dart';
 import 'lungs_screen.dart';
 import 'settings_screen.dart';
 
+const Color _bg = Color(0xFF0F172A);
+const Color _card = Color(0xFF1E293B);
+const Color _border = Color(0xFF334155);
+const Color _accent = Color(0xFF818CF8);
+const Color _green = Color(0xFF34D399);
+const Color _sub = Color(0xFF94A3B8);
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -59,11 +66,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int _getStreak() {
     if (_dailyCount > 0) return 0;
-
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final quit = DateTime(_quitDate.year, _quitDate.month, _quitDate.day);
-
     int streak = today.difference(quit).inDays;
     return streak < 0 ? 0 : streak;
   }
@@ -96,7 +101,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final userDateKey = 'last_saved_date_$userId';
     final userCountKey = 'daily_count_$userId';
-
     final savedDateKey = prefs.getString(userDateKey);
 
     if (savedDateKey == todayKey) {
@@ -115,18 +119,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
       double pastTotal = _totalSaved;
       await prefs.setDouble('past_total_saved_$userId', pastTotal);
-
       double baseLung = _lungScore;
       await prefs.setDouble('past_lung_score_$userId', baseLung);
 
       setState(() => _dailyCount = 0);
 
       double pricePerCig = _packPrice / _packSize;
-      double newLiveTotal = pastTotal + (_dailyBaseline * pricePerCig);
-      await _updateTotalSaved(newLiveTotal);
-
-      double newLiveLung = baseLung + 1.11;
-      await _updateLungScore(newLiveLung);
+      await _updateTotalSaved(pastTotal + (_dailyBaseline * pricePerCig));
+      await _updateLungScore(baseLung + 1.11);
 
       await prefs.setString(userDateKey, todayKey);
       await prefs.setInt(userCountKey, 0);
@@ -176,12 +176,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     double pastTotal = prefs.getDouble('past_total_saved_$userId') ?? 0.0;
     double pricePerCig = _packPrice / _packSize;
-    double absoluteTruthTotal = pastTotal + ((_dailyBaseline - _dailyCount) * pricePerCig);
-    await _updateTotalSaved(absoluteTruthTotal);
+    await _updateTotalSaved(pastTotal + ((_dailyBaseline - _dailyCount) * pricePerCig));
 
     double pastLung = prefs.getDouble('past_lung_score_$userId') ?? 10.0;
-    double absoluteTruthLung = (pastLung + 1.11) - (_dailyCount * 25.0);
-    await _updateLungScore(absoluteTruthLung);
+    await _updateLungScore((pastLung + 1.11) - (_dailyCount * 25.0));
   }
 
   void _loadUserData() async {
@@ -282,12 +280,10 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
       final imageUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
-
       await supabase.from('profiles').update({'avatar_url': imageUrl}).eq('id', user.id);
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('avatar_url_${user.id}', imageUrl);
-
       setState(() => _avatarUrl = imageUrl);
 
       if (mounted) {
@@ -306,47 +302,46 @@ class _HomeScreenState extends State<HomeScreen> {
     TextEditingController baselineCtrl = TextEditingController(text: _dailyBaseline.toString());
 
     showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(side: const BorderSide(color: Colors.black, width: 3), borderRadius: BorderRadius.circular(0)),
-            backgroundColor: Colors.white,
-            title: Text(
-              isReminder ? 'Price Check!' : 'Cigarette Info',
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24),
-              textAlign: TextAlign.center,
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isReminder)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 15.0),
-                    child: Text('It has been 2 months! Have cigarette prices changed?', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: _card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            isReminder ? 'Price Check!' : 'Cigarette Info',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22),
+            textAlign: TextAlign.center,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isReminder)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    'It has been 2 months! Have cigarette prices changed?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: _sub, fontWeight: FontWeight.w500),
                   ),
-                TextField(
-                  controller: priceCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Pack Price (TL)', border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black))),
                 ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: sizeCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Cigarettes per Pack', border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black))),
+              _dialogField(controller: priceCtrl, label: 'Pack Price (TL)'),
+              const SizedBox(height: 12),
+              _dialogField(controller: sizeCtrl, label: 'Cigarettes per Pack'),
+              const SizedBox(height: 12),
+              _dialogField(controller: baselineCtrl, label: 'Daily cigarettes smoked'),
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _accent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: baselineCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'How many did you smoke daily?', border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black))),
-                ),
-              ],
-            ),
-            actionsAlignment: MainAxisAlignment.center,
-            actions: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white),
                 onPressed: () async {
                   final user = supabase.auth.currentUser;
                   if (user != null) {
@@ -379,11 +374,34 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                   if (mounted) Navigator.pop(context);
                 },
-                child: const Text('Save Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('Save Settings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
-            ],
-          );
-        }
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _dialogField({required TextEditingController controller, required String label}) {
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: _sub),
+        filled: true,
+        fillColor: _bg,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: _border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: _accent),
+        ),
+      ),
     );
   }
 
@@ -401,7 +419,11 @@ class _HomeScreenState extends State<HomeScreen> {
           final profile = await supabase.from('profiles').select().eq('id', f['addressee_id']).maybeSingle();
           final friendName = profile != null ? profile['username'] : 'Someone';
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('🎉 $friendName accepted your friend request!'), backgroundColor: Colors.green, duration: const Duration(seconds: 4)));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('🎉 $friendName accepted your friend request!'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 4),
+            ));
           }
           notifiedIds.add(friendshipId);
         }
@@ -415,7 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _logout() async {
     await supabase.auth.signOut();
     if (mounted) {
-      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const AuthScreen()), (route) => false);
+      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const AuthScreen()), (route) => false);
     }
   }
 
@@ -427,49 +449,82 @@ class _HomeScreenState extends State<HomeScreen> {
     int popUpCount = 0;
 
     showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          return StatefulBuilder(
-              builder: (context, setStateDialog) {
-                return AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0), side: const BorderSide(color: Colors.black, width: 3)),
-                  backgroundColor: Colors.white,
-                  title: const Text('Daily Check-In', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24), textAlign: TextAlign.center),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: _card,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text(
+                'Daily Check-In',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22),
+                textAlign: TextAlign.center,
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    question,
+                    style: const TextStyle(color: _sub, fontSize: 15, fontWeight: FontWeight.w500),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 28),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(question, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                      const SizedBox(height: 30),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton(iconSize: 40, icon: const Icon(Icons.remove_circle_outline), onPressed: () { if (popUpCount > 0) setStateDialog(() => popUpCount--); }),
-                          Padding(padding: const EdgeInsets.symmetric(horizontal: 24.0), child: Text(popUpCount.toString(), style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold))),
-                          IconButton(iconSize: 40, icon: const Icon(Icons.add_circle_outline), onPressed: () => setStateDialog(() => popUpCount++)),
-                        ],
+                      _counterButton(Icons.remove_rounded, () {
+                        if (popUpCount > 0) setStateDialog(() => popUpCount--);
+                      }),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 28),
+                        child: Text(
+                          '$popUpCount',
+                          style: const TextStyle(fontSize: 52, fontWeight: FontWeight.w900, color: Colors.white),
+                        ),
                       ),
+                      _counterButton(Icons.add_rounded, () => setStateDialog(() => popUpCount++)),
                     ],
                   ),
-                  actionsAlignment: MainAxisAlignment.center,
-                  actions: [
-                    if (popUpCount == 0) TextButton(onPressed: () => Navigator.pop(context), child: const Text("No, I stayed strong!", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 18))),
-                    if (popUpCount > 0) ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: const RoundedRectangleBorder(side: BorderSide(color: Colors.black, width: 2))),
-                      onPressed: () { _updateDailyCount(_dailyCount + popUpCount); Navigator.pop(context); },
-                      child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                ],
+              ),
+              actionsAlignment: MainAxisAlignment.center,
+              actions: [
+                if (popUpCount == 0)
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("I stayed strong!", style: TextStyle(color: _green, fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
-                  ],
-                );
-              }
-          );
-        }
+                  ),
+                if (popUpCount > 0)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _accent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () {
+                        _updateDailyCount(_dailyCount + popUpCount);
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
-  void _onItemTapped(int index) {
-    setState(() => _selectedIndex = index);
-  }
+  void _onItemTapped(int index) => setState(() => _selectedIndex = index);
 
   @override
   Widget build(BuildContext context) {
@@ -477,184 +532,383 @@ class _HomeScreenState extends State<HomeScreen> {
     final isCigarette = habit.toString().toLowerCase().contains('cigarette');
     int currentStreak = _getStreak();
 
-    final List<Widget> _screens = [
-      _buildHomeTab(habit),
+    final List<Widget> screens = [
+      _buildHomeTab(habit, currentStreak),
       LungsScreen(lungScore: _lungScore),
-      const FriendsScreen()
+      const FriendsScreen(),
     ];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black, size: 30),
-        title: const Text('Better Life', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 24)),
+        iconTheme: const IconThemeData(color: Colors.white, size: 26),
+        title: const Text(
+          'Better Life',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22, letterSpacing: 0.5),
+        ),
         centerTitle: true,
       ),
-      drawer: Drawer(
-        backgroundColor: Colors.white,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(color: Colors.black),
-              margin: EdgeInsets.zero,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  GestureDetector(
-                    onTap: _uploadAvatar,
-                    child: Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 32,
-                          backgroundColor: Colors.white24,
-                          backgroundImage: _avatarUrl != null ? NetworkImage(_avatarUrl!) : null,
-                          child: _avatarUrl == null ? const Icon(Icons.account_circle, size: 64, color: Colors.white) : null,
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                            child: const Icon(Icons.camera_alt, size: 14, color: Colors.black),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _userData['username']?.toString().toUpperCase() ?? 'USER',
-                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Row(
-                    children: [
-                      Text(
-                        currentStreak > 0 ? '$currentStreak DAYS STREAK' : '0 DAYS STREAK',
-                        style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold),
-                      ),
-                      if (currentStreak >= 1) ...[
-                        const SizedBox(width: 8),
-                        const AnimatedFlame(),
-                      ]
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            if (isCigarette)
-              ListTile(
-                leading: const Icon(Icons.smoking_rooms, color: Colors.black, size: 30),
-                title: const Text('Cigarette Info', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showSettingsDialog();
-                },
-              ),
-            const Divider(color: Colors.black26, thickness: 1),
-            ListTile(
-              leading: const Icon(Icons.settings, color: Colors.black, size: 30),
-              title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                ).then((_) {
-                  _loadUserData();
-                });
-              },
-            ),
-            ListTile(leading: const Icon(Icons.logout, color: Colors.red, size: 30), title: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18)), onTap: _logout),
-          ],
-        ),
+      drawer: _buildDrawer(isCigarette, currentStreak),
+      body: screens[_selectedIndex],
+      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildBottomNav() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: _card,
+        border: Border(top: BorderSide(color: _border, width: 1)),
       ),
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.black,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.grey.shade600,
+      child: BottomNavigationBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        selectedItemColor: _accent,
+        unselectedItemColor: const Color(0xFF475569),
         showSelectedLabels: false,
         showUnselectedLabels: false,
-        iconSize: 32,
+        iconSize: 28,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
-        items: const <BottomNavigationBarItem>[
+        items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.fitness_center_outlined), activeIcon: Icon(Icons.fitness_center), label: 'Lungs'),
+          BottomNavigationBarItem(icon: Icon(Icons.favorite_outline), activeIcon: Icon(Icons.favorite), label: 'Lungs'),
           BottomNavigationBarItem(icon: Icon(Icons.people_outline), activeIcon: Icon(Icons.people), label: 'Friends'),
         ],
       ),
     );
   }
 
-  Widget _buildHomeTab(String habit) {
-    String label = '$habit\ntoday.';
-    if (habit.toLowerCase().contains('cigarette')) label = 'Cigarettes smoked\ntoday.';
+  Widget _buildDrawer(bool isCigarette, int currentStreak) {
+    return Drawer(
+      backgroundColor: _card,
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF4338CA), Color(0xFF1E293B)],
+              ),
+            ),
+            margin: EdgeInsets.zero,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: _uploadAvatar,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 32,
+                        backgroundColor: Colors.white24,
+                        backgroundImage: _avatarUrl != null ? NetworkImage(_avatarUrl!) : null,
+                        child: _avatarUrl == null ? const Icon(Icons.account_circle, size: 64, color: Colors.white) : null,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: _accent,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: _card, width: 2),
+                          ),
+                          child: const Icon(Icons.camera_alt, size: 12, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _userData['username']?.toString().toUpperCase() ?? 'USER',
+                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    if (currentStreak > 0) ...[
+                      const AnimatedFlame(),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(
+                      currentStreak > 0 ? '$currentStreak day streak' : '0 day streak',
+                      style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (isCigarette)
+            _drawerItem(
+              icon: Icons.smoking_rooms_rounded,
+              label: 'Cigarette Info',
+              onTap: () {
+                Navigator.pop(context);
+                _showSettingsDialog();
+              },
+            ),
+          const Divider(color: _border, height: 1),
+          _drawerItem(
+            icon: Icons.settings_outlined,
+            label: 'Settings',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())).then((_) => _loadUserData());
+            },
+          ),
+          _drawerItem(
+            icon: Icons.logout_rounded,
+            label: 'Logout',
+            color: Colors.redAccent,
+            onTap: _logout,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _drawerItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color color = Colors.white,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: color, size: 22),
+      title: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 15)),
+      onTap: onTap,
+      horizontalTitleGap: 8,
+    );
+  }
+
+  Widget _buildHomeTab(String habit, int currentStreak) {
+    String label = '$habit today';
+    if (habit.toLowerCase().contains('cigarette')) label = 'cigarettes smoked today';
+
+    final double progress = _dailyBaseline > 0 ? (_dailyCount / _dailyBaseline).clamp(0.0, 1.0) : 0.0;
+    final Color progressColor = _dailyCount == 0
+        ? _green
+        : (_dailyCount >= _dailyBaseline ? Colors.redAccent : _accent);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Main counter card
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-            decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.black, width: 3)),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1E3A5F), Color(0xFF0F172A)],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: _border, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.4),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
             child: Column(
               children: [
-                Container(width: 20, height: 20, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.black, width: 3))),
-                const SizedBox(height: 20),
-                Text(_todayDateStr, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: 2)),
-                const SizedBox(height: 10),
-                Text(_todayDayName, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
-                const SizedBox(height: 40),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _todayDayName,
+                          style: const TextStyle(
+                            color: _accent,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 3,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _todayDateStr,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (currentStreak > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.orange.withOpacity(0.4), width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const AnimatedFlame(),
+                            const SizedBox(width: 5),
+                            Text(
+                              '$currentStreak',
+                              style: const TextStyle(
+                                color: Colors.orange,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 36),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text(_dailyCount.toString(), style: const TextStyle(fontSize: 100, height: 1, fontWeight: FontWeight.w900)),
-                    const SizedBox(width: 20),
-                    Column(
-                      children: [
-                        IconButton(iconSize: 45, padding: EdgeInsets.zero, constraints: const BoxConstraints(), icon: const Icon(Icons.add_circle_outline), onPressed: () => _updateDailyCount(_dailyCount + 1)),
-                        const SizedBox(height: 10),
-                        IconButton(iconSize: 45, padding: EdgeInsets.zero, constraints: const BoxConstraints(), icon: const Icon(Icons.remove_circle_outline), onPressed: () => _updateDailyCount(_dailyCount - 1)),
-                      ],
+                    _counterButton(Icons.remove_rounded, () => _updateDailyCount(_dailyCount - 1)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        '$_dailyCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 92,
+                          fontWeight: FontWeight.w900,
+                          height: 1,
+                        ),
+                      ),
                     ),
+                    _counterButton(Icons.add_rounded, () => _updateDailyCount(_dailyCount + 1)),
                   ],
                 ),
+                const SizedBox(height: 16),
+                Text(
+                  label,
+                  style: const TextStyle(color: _sub, fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.3),
+                ),
                 const SizedBox(height: 20),
-                Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: _border,
+                    valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                    minHeight: 8,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('today: $_dailyCount', style: const TextStyle(color: _sub, fontSize: 12)),
+                    Text('goal: 0  (was $_dailyBaseline)', style: const TextStyle(color: _sub, fontSize: 12)),
+                  ],
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 16),
           if (habit.toLowerCase().contains('cigarette'))
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: Colors.green.shade100, border: Border.all(color: Colors.black, width: 3)),
-              child: Column(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [const Color(0xFF064E3B), _bg],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: _green.withOpacity(0.25), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: _green.withOpacity(0.06),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
                 children: [
-                  const Text('TOTAL SAVED', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-                  const SizedBox(height: 10),
-                  Text('₺${(_totalSaved < 0 ? 0.0 : _totalSaved).toStringAsFixed(2)}', style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: Colors.green)),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Daily Saving Target: ₺${(_dailyBaseline * (_packPrice / _packSize)).toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black54),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _green.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.savings_outlined, color: _green, size: 26),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'TOTAL SAVED',
+                        style: TextStyle(
+                          color: Color(0xFF6EE7B7),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '₺${(_totalSaved < 0 ? 0.0 : _totalSaved).toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        'daily target: ₺${(_dailyBaseline * (_packPrice / _packSize)).toStringAsFixed(2)}',
+                        style: const TextStyle(color: Color(0xFF6EE7B7), fontSize: 12),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _counterButton(IconData icon, VoidCallback onPressed) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          color: const Color(0xFF334155),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF475569), width: 1),
+        ),
+        child: Icon(icon, color: Colors.white, size: 24),
       ),
     );
   }
@@ -674,14 +928,8 @@ class _AnimatedFlameState extends State<AnimatedFlame> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    )..repeat(reverse: true);
-
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..repeat(reverse: true);
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -694,11 +942,7 @@ class _AnimatedFlameState extends State<AnimatedFlame> with SingleTickerProvider
   Widget build(BuildContext context) {
     return ScaleTransition(
       scale: _scaleAnimation,
-      child: const Icon(
-        Icons.local_fire_department,
-        color: Colors.orangeAccent,
-        size: 22,
-      ),
+      child: const Icon(Icons.local_fire_department, color: Colors.orangeAccent, size: 20),
     );
   }
 }
