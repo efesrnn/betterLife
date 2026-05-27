@@ -1,57 +1,178 @@
 import 'package:flutter/material.dart';
+import 'app_theme.dart';
 
-const Color _bg = Color(0xFF0F172A);
-const Color _card = Color(0xFF1E293B);
-const Color _border = Color(0xFF334155);
-const Color _sub = Color(0xFF94A3B8);
+class _Milestone {
+  final double requiredScore;
+  final String title;
+  final String timeLabel;
+  const _Milestone(this.requiredScore, this.title, this.timeLabel);
+}
 
-class LungsScreen extends StatelessWidget {
+const _milestones = [
+  _Milestone(11.5, 'Blood pressure normalizing',  '20 min'),
+  _Milestone(13.0, 'Carbon monoxide clearing',     '8 hours'),
+  _Milestone(15.0, 'Nerve endings recovering',     '48 hours'),
+  _Milestone(20.0, 'Circulation improving',        '2 weeks'),
+  _Milestone(30.0, 'Lung function improving',      '1 month'),
+  _Milestone(45.0, 'Lung capacity growing',        '3 months'),
+  _Milestone(60.0, 'Cilia regenerating',           '9 months'),
+  _Milestone(80.0, 'Heart disease risk halved',    '1 year'),
+  _Milestone(95.0, 'Lung cancer risk reducing',    '5 years'),
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+class LungsScreen extends StatefulWidget {
   final double lungScore;
-
   const LungsScreen({super.key, required this.lungScore});
 
   @override
+  State<LungsScreen> createState() => _LungsScreenState();
+}
+
+class _LungsScreenState extends State<LungsScreen> {
+  bool _showMilestones = false;
+
+  @override
   Widget build(BuildContext context) {
-    double displayScore = lungScore.clamp(0.0, 100.0);
-    double normalizedScore = displayScore / 100.0;
+    final score = widget.lungScore.clamp(0.0, 100.0);
+    final completed =
+        _milestones.where((m) => score >= m.requiredScore).length;
 
     return Container(
-      color: _bg,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        child: Column(
+      color: context.appBg,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header row ──────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  _showMilestones ? 'Recovery Milestones' : 'Lung Health',
+                  style: TextStyle(
+                    color: context.appText,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                // Tappable small ring — toggles view
+                GestureDetector(
+                  onTap: () =>
+                      setState(() => _showMilestones = !_showMilestones),
+                  child: _SmallProgressRing(score: score),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Content ─────────────────────────────────────────────────────
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: _showMilestones
+                  ? _MilestoneListView(
+                      key: const ValueKey('milestones'),
+                      score: score,
+                      completed: completed,
+                    )
+                  : _MainLungsView(
+                      key: const ValueKey('main'),
+                      score: score,
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Small tappable ring in top right ────────────────────────────────────────
+
+class _SmallProgressRing extends StatelessWidget {
+  final double score;
+  const _SmallProgressRing({required this.score});
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = score / 100.0;
+    final color =
+        Color.lerp(Colors.redAccent, context.appAccent, normalized)!;
+
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: context.appCard,
+        shape: BoxShape.circle,
+      ),
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            const Text(
-              'LUNG HEALTH',
+            CircularProgressIndicator(
+              value: normalized,
+              strokeWidth: 4.5,
+              backgroundColor: context.appBorder,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+              strokeCap: StrokeCap.round,
+            ),
+            Text(
+              '${score.toInt()}%',
               style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 3,
+                color: context.appText,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 48),
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.0, end: normalizedScore),
-              duration: const Duration(milliseconds: 1500),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Main view: big gauge + 2 info cards ─────────────────────────────────────
+
+class _MainLungsView extends StatelessWidget {
+  final double score;
+  const _MainLungsView({super.key, required this.score});
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = score / 100.0;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      child: Column(
+        children: [
+          const SizedBox(height: 16),
+          // Big circular gauge
+          Center(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: normalized),
+              duration: const Duration(milliseconds: 1200),
               curve: Curves.easeOut,
-              builder: (context, value, _) {
-                final Color gaugeColor = Color.lerp(
-                  const Color(0xFF64748B),
-                  const Color(0xFFFF6B9D),
-                  value,
-                )!;
+              builder: (ctx, value, child) {
+                final gaugeColor =
+                    Color.lerp(Colors.redAccent, context.appAccent, value)!;
                 return Stack(
                   alignment: Alignment.center,
                   children: [
                     SizedBox(
-                      width: 200,
-                      height: 200,
+                      width: 180,
+                      height: 180,
                       child: CircularProgressIndicator(
                         value: value,
-                        strokeWidth: 18,
-                        backgroundColor: _card,
-                        valueColor: AlwaysStoppedAnimation<Color>(gaugeColor),
+                        strokeWidth: 14,
+                        backgroundColor: context.appBorder,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(gaugeColor),
                         strokeCap: StrokeCap.round,
                       ),
                     ),
@@ -62,17 +183,17 @@ class LungsScreen extends StatelessWidget {
                           '${(value * 100).toStringAsFixed(1)}%',
                           style: TextStyle(
                             color: gaugeColor,
-                            fontSize: 40,
+                            fontSize: 36,
                             fontWeight: FontWeight.w900,
                             height: 1,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
+                        Text(
                           'HEALTH',
                           style: TextStyle(
-                            color: _sub,
-                            fontSize: 11,
+                            color: context.appSub,
+                            fontSize: 10,
                             letterSpacing: 3,
                             fontWeight: FontWeight.w600,
                           ),
@@ -83,81 +204,103 @@ class LungsScreen extends StatelessWidget {
                 );
               },
             ),
-            const SizedBox(height: 48),
-            _statusCard(normalizedScore),
-            const SizedBox(height: 16),
-            _infoCard(
-              icon: Icons.timeline_rounded,
-              iconColor: const Color(0xFF818CF8),
-              title: 'Recovery Progress',
-              body: normalizedScore < 0.3
-                  ? 'Every smoke free hour matters. Your body has already begun repairing itself.'
-                  : normalizedScore < 0.7
-                  ? 'You\'re making real progress. Lung capacity is improving with each clean day.'
-                  : 'Outstanding recovery. Your lungs are functioning close to non-smoker levels.',
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 32),
+
+          // Status card
+          _statusCard(context, normalized),
+          const SizedBox(height: 12),
+
+          // Recovery progress card
+          _infoCard(
+            context,
+            icon: Icons.timeline_rounded,
+            title: 'Recovery Progress',
+            body: normalized < 0.3
+                ? 'Every smoke free hour matters. Your body has already begun repairing itself.'
+                : normalized < 0.7
+                    ? 'You\'re making real progress. Lung capacity is improving with each clean day.'
+                    : 'Outstanding recovery. Your lungs are functioning close to non-smoker levels.',
+          ),
+        ],
       ),
     );
   }
 
-  Widget _statusCard(double normalizedScore) {
+  Widget _statusCard(BuildContext context, double normalized) {
     final IconData icon;
     final Color iconColor;
     final String title;
     final String body;
 
-    if (normalizedScore < 0.3) {
+    if (normalized < 0.3) {
       icon = Icons.warning_amber_rounded;
       iconColor = Colors.redAccent;
       title = 'Critical';
-      body = 'Cilia cells are paralyzed. High carbon monoxide levels. Lungs are suffocating.';
-    } else if (normalizedScore < 0.7) {
+      body =
+          'Cilia cells are paralyzed. High carbon monoxide levels. Lungs are suffocating.';
+    } else if (normalized < 0.7) {
       icon = Icons.trending_up_rounded;
       iconColor = Colors.orangeAccent;
       title = 'Recovering';
-      body = 'Cilia regeneration has started. Mucus is clearing out. Oxygen levels rising.';
+      body =
+          'Cilia regeneration has started. Mucus is clearing out. Oxygen levels rising.';
     } else {
       icon = Icons.check_circle_rounded;
-      iconColor = const Color(0xFF34D399);
+      iconColor = context.appAccent;
       title = 'Healthy';
-      body = 'Lungs are heavily oxygenated. Tissue color returning to natural healthy pink.';
+      body =
+          'Lungs are heavily oxygenated. Tissue color returning to natural healthy pink.';
     }
 
+    return _infoCard(context,
+        icon: icon, iconColor: iconColor, title: title, body: body);
+  }
+
+  Widget _infoCard(
+    BuildContext context, {
+    required IconData icon,
+    Color? iconColor,
+    required String title,
+    required String body,
+  }) {
+    final color = iconColor ?? context.appAccent;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: _card,
+        color: context.appCard,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: iconColor.withAlpha(60), width: 1),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: iconColor.withAlpha(25),
-              borderRadius: BorderRadius.circular(12),
+              color: color.withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: iconColor, size: 22),
+            child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(color: iconColor, fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.5),
-                ),
+                Text(title,
+                    style: TextStyle(
+                        color: color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2)),
                 const SizedBox(height: 4),
-                Text(
-                  body,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500, height: 1.5),
-                ),
+                Text(body,
+                    style: TextStyle(
+                        color: context.appText,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        height: 1.5)),
               ],
             ),
           ),
@@ -165,51 +308,95 @@ class LungsScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _infoCard({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String body,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _border, width: 1),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: iconColor.withAlpha(25),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: iconColor, size: 22),
+// ─── Milestone list view ──────────────────────────────────────────────────────
+
+class _MilestoneListView extends StatelessWidget {
+  final double score;
+  final int completed;
+  const _MilestoneListView(
+      {super.key, required this.score, required this.completed});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+      itemCount: _milestones.length,
+      itemBuilder: (context, index) {
+        final m = _milestones[index];
+        final progress = (score / m.requiredScore).clamp(0.0, 1.0);
+        final pct = (progress * 100).round();
+        final color =
+            Color.lerp(Colors.redAccent, context.appAccent, progress)!;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: context.appCard,
+            borderRadius: BorderRadius.circular(18),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(color: iconColor, fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.5),
+          child: Row(
+            children: [
+              // Small circular progress
+              SizedBox(
+                width: 58,
+                height: 58,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: progress),
+                  duration: const Duration(milliseconds: 900),
+                  curve: Curves.easeOut,
+                  builder: (ctx, value, child) {
+                    final c = Color.lerp(
+                        Colors.redAccent, context.appAccent, value)!;
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          value: value,
+                          strokeWidth: 5,
+                          backgroundColor: context.appBorder,
+                          valueColor: AlwaysStoppedAnimation<Color>(c),
+                          strokeCap: StrokeCap.round,
+                        ),
+                        Text(
+                          '$pct%',
+                          style: TextStyle(
+                            color: context.appText,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  body,
-                  style: const TextStyle(color: _sub, fontSize: 14, fontWeight: FontWeight.w400, height: 1.5),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(m.title,
+                        style: TextStyle(
+                            color: context.appText,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text(m.timeLabel,
+                        style: TextStyle(
+                            color: context.appSub,
+                            fontSize: 13)),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              if (progress >= 1.0)
+                Icon(Icons.check_circle_rounded, color: color, size: 22),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
