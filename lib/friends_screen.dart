@@ -13,6 +13,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
   final supabase = Supabase.instance.client;
   final _searchController = TextEditingController();
   bool _isSearching = false;
+  int _pendingRequestCount = 0;
 
   List<Map<String, dynamic>> _allFriends = [];
   List<Map<String, dynamic>> _filteredFriends = [];
@@ -21,6 +22,20 @@ class _FriendsScreenState extends State<FriendsScreen> {
   void initState() {
     super.initState();
     _fetchMyFriends();
+    _fetchPendingCount();
+  }
+
+  Future<void> _fetchPendingCount() async {
+    final myId = supabase.auth.currentUser?.id;
+    if (myId == null) return;
+    final result = await supabase
+        .from('friendships')
+        .select('id')
+        .eq('addressee_id', myId)
+        .eq('status', 'PENDING');
+    if (mounted) {
+      setState(() => _pendingRequestCount = result.length);
+    }
   }
 
   Future<void> _fetchMyFriends() async {
@@ -41,12 +56,39 @@ class _FriendsScreenState extends State<FriendsScreen> {
           .select()
           .eq('id', friendId)
           .maybeSingle();
-      if (profile != null) list.add(profile);
+      if (profile != null) list.add({...profile, '_friendship_id': f['id']});
     }
     setState(() {
       _allFriends = list;
       _filteredFriends = list;
     });
+  }
+
+  Future<void> _unfriend(dynamic friendshipId, String username) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.appCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Remove Friend',
+            style: TextStyle(color: context.appText, fontWeight: FontWeight.w800)),
+        content: Text('Remove $username from your friends?',
+            style: TextStyle(color: context.appSub)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: context.appSub)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remove', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await supabase.from('friendships').delete().eq('id', friendshipId);
+    _fetchMyFriends();
   }
 
   void _filterFriends(String query) {
@@ -101,14 +143,45 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 )
               else ...[
                 const Spacer(),
-                _iconBtn(
-                  context,
-                  Icons.notifications_none_rounded,
-                  () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const FriendRequestsScreen()))
-                      .then((_) => _fetchMyFriends()),
+                Stack(
+                  children: [
+                    _iconBtn(
+                      context,
+                      Icons.notifications_none_rounded,
+                      () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const FriendRequestsScreen()))
+                          .then((_) {
+                        _fetchMyFriends();
+                        _fetchPendingCount();
+                      }),
+                    ),
+                    if (_pendingRequestCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              _pendingRequestCount > 9
+                                  ? '9+'
+                                  : '$_pendingRequestCount',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(width: 10),
                 _iconBtn(
@@ -169,24 +242,29 @@ class _FriendsScreenState extends State<FriendsScreen> {
       double totalSaved, bool isCigarette) {
     final initials =
         (friend['username'] ?? '?')[0].toString().toUpperCase();
+    final avatarUrl = friend['avatar_url'] as String?;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: context.appCard,
         borderRadius: BorderRadius.circular(14),
-        
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 22,
             backgroundColor: context.appBorder,
-            child: Text(initials,
-                style: TextStyle(
-                    color: context.appText,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16)),
+            backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                ? NetworkImage(avatarUrl)
+                : null,
+            child: avatarUrl == null || avatarUrl.isEmpty
+                ? Text(initials,
+                    style: TextStyle(
+                        color: context.appText,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16))
+                : null,
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -212,6 +290,19 @@ class _FriendsScreenState extends State<FriendsScreen> {
                   ),
                 ],
               ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () => _unfriend(
+                friend['_friendship_id'], friend['username'] ?? 'this user'),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withAlpha(20),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.person_remove_rounded,
+                  color: Colors.redAccent, size: 20),
             ),
           ),
         ],
@@ -266,18 +357,19 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
           'friendship_id': f['id'],
           'username': profile['username'],
           'habit': profile['habit'],
+          'avatar_url': profile['avatar_url'],
         });
       }
     }
     return requests;
   }
 
-  Future<void> _accept(String id) async {
+  Future<void> _accept(dynamic id) async {
     await supabase.from('friendships').update({'status': 'ACCEPTED'}).eq('id', id);
     setState(() {});
   }
 
-  Future<void> _reject(String id) async {
+  Future<void> _reject(dynamic id) async {
     await supabase.from('friendships').delete().eq('id', id);
     setState(() {});
   }
@@ -321,24 +413,30 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
               final req = requests[i];
               final initials =
                   (req['username'] ?? '?')[0].toString().toUpperCase();
+              final avatarUrl = req['avatar_url'] as String?;
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: context.appCard,
                   borderRadius: BorderRadius.circular(14),
-                  
+
                 ),
                 child: Row(
                   children: [
                     CircleAvatar(
                       radius: 20,
                       backgroundColor: context.appBorder,
-                      child: Text(initials,
-                          style: TextStyle(
-                              color: context.appText,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14)),
+                      backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                          ? NetworkImage(avatarUrl)
+                          : null,
+                      child: avatarUrl == null || avatarUrl.isEmpty
+                          ? Text(initials,
+                              style: TextStyle(
+                                  color: context.appText,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14))
+                          : null,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -421,6 +519,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
           break;
         }
       }
+      if (status == 'ACCEPTED') continue;
       result.add({...user, 'friendship_status': status});
     }
     return result;
@@ -510,24 +609,30 @@ class _DiscoverUserTileState extends State<DiscoverUserTile> {
   Widget build(BuildContext context) {
     final initials =
         (widget.user['username'] ?? '?')[0].toString().toUpperCase();
+    final avatarUrl = widget.user['avatar_url'] as String?;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: context.appCard,
         borderRadius: BorderRadius.circular(14),
-        
+
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 20,
             backgroundColor: context.appBorder,
-            child: Text(initials,
-                style: TextStyle(
-                    color: context.appText,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14)),
+            backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                ? NetworkImage(avatarUrl)
+                : null,
+            child: avatarUrl == null || avatarUrl.isEmpty
+                ? Text(initials,
+                    style: TextStyle(
+                        color: context.appText,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14))
+                : null,
           ),
           const SizedBox(width: 12),
           Expanded(
