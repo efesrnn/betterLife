@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'auth_screen.dart';
 import 'habit_selection_screen.dart';
 import 'home_screen.dart';
+// EmailVerificationScreen auth_screen.dart içinde tanımlı
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -28,13 +29,23 @@ class _AuthGateState extends State<AuthGate> {
     if (!mounted) return;
 
     if (session != null) {
-      // Kullanıcı giriş yapmış. Peki kurulumu bitirmiş mi?
-      final isSetupComplete = session.user.userMetadata?['is_setup_complete'] ?? false;
+      final user = session.user;
+      final emailConfirmed = user.emailConfirmedAt != null;
 
+      if (!emailConfirmed) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => EmailVerificationScreen(email: user.email ?? ''),
+          ),
+        );
+        return;
+      }
+
+      final isSetupComplete = user.userMetadata?['is_setup_complete'] ?? false;
       if (isSetupComplete) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())); // DEĞİŞTİ
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
       } else {
-        // Giriş yapmış ama kurulumu tamamlamadan çıkmış -> Alışkanlık seçimine
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HabitSelectionScreen()));
       }
     } else {

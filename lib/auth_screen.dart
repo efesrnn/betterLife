@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_theme.dart';
@@ -43,29 +44,53 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       if (_isLogin) {
         await supabase.auth.signInWithPassword(email: email, password: password);
+        if (mounted) {
+          final user = supabase.auth.currentUser;
+          final emailConfirmed = user?.emailConfirmedAt != null;
+          if (!emailConfirmed) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => EmailVerificationScreen(email: email),
+              ),
+            );
+            return;
+          }
+          final isSetupComplete = user?.userMetadata?['is_setup_complete'] ?? false;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => isSetupComplete
+                  ? const HomeScreen()
+                  : const HabitSelectionScreen(),
+            ),
+          );
+        }
       } else {
         await supabase.auth.signUp(email: email, password: password);
-      }
-
-      if (mounted) {
-        final user = supabase.auth.currentUser;
-        final isSetupComplete = user?.userMetadata?['is_setup_complete'] ?? false;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => isSetupComplete
-                ? const HomeScreen()
-                : const HabitSelectionScreen(),
-          ),
-        );
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EmailVerificationScreen(email: email),
+            ),
+          );
+        }
       }
     } on AuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent));
+      if (mounted) {
+        final message = e.message.toLowerCase().contains('rate limit')
+            ? 'Too many attempts. Please wait a few minutes and try again.'
+            : e.message;
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message), backgroundColor: Colors.redAccent));
+      }
     } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('An unexpected error occurred.'),
-          backgroundColor: Colors.redAccent));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('An unexpected error occurred.'),
+            backgroundColor: Colors.redAccent));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -207,6 +232,208 @@ class _AuthScreenState extends State<AuthScreen> {
           borderSide: BorderSide(color: context.appAccent, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+    );
+  }
+}
+
+// ─── Email Verification Screen ────────────────────────────────────────────────
+
+class EmailVerificationScreen extends StatefulWidget {
+  final String email;
+  const EmailVerificationScreen({super.key, required this.email});
+
+  @override
+  State<EmailVerificationScreen> createState() =>
+      _EmailVerificationScreenState();
+}
+
+class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
+  final supabase = Supabase.instance.client;
+  Timer? _pollTimer;
+  int _resendCooldown = 0;
+  Timer? _cooldownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    _cooldownTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      try {
+        await supabase.auth.refreshSession();
+        final user = supabase.auth.currentUser;
+        if (user?.emailConfirmedAt != null && mounted) {
+          _pollTimer?.cancel();
+          final isSetupComplete =
+              user?.userMetadata?['is_setup_complete'] ?? false;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => isSetupComplete
+                  ? const HomeScreen()
+                  : const HabitSelectionScreen(),
+            ),
+          );
+        }
+      } catch (_) {}
+    });
+  }
+
+  Future<void> _resendEmail() async {
+    if (_resendCooldown > 0) return;
+    try {
+      await supabase.auth.resend(type: OtpType.signup, email: widget.email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Verification email resent to ${widget.email}'),
+          backgroundColor: supabase.auth.currentUser != null
+              ? Colors.green
+              : Colors.redAccent,
+        ));
+      }
+      setState(() => _resendCooldown = 60);
+      _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+        if (!mounted) {
+          t.cancel();
+          return;
+        }
+        setState(() => _resendCooldown--);
+        if (_resendCooldown <= 0) t.cancel();
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Failed to resend: $e'),
+          backgroundColor: Colors.redAccent,
+        ));
+      }
+    }
+  }
+
+  Future<void> _goBack() async {
+    _pollTimer?.cancel();
+    await supabase.auth.signOut();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AuthScreen()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.appBg,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: context.appAccent.withAlpha(25),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.mark_email_unread_rounded,
+                      size: 40, color: context.appAccent),
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  'Verify Your Email',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: context.appText,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'We sent a verification link to',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: context.appSub),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.email,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: context.appText,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Click the link in the email to continue.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: context.appSub),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: context.appAccent,
+                    strokeWidth: 2.5,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: _resendCooldown > 0 ? null : _resendEmail,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: context.appAccent,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: context.appBorder,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: Text(
+                      _resendCooldown > 0
+                          ? 'Resend in ${_resendCooldown}s'
+                          : 'Resend Email',
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextButton.icon(
+                  onPressed: _goBack,
+                  icon: Icon(Icons.arrow_back_rounded,
+                      size: 16, color: context.appSub),
+                  label: Text(
+                    'Wrong email? Go back',
+                    style: TextStyle(
+                        color: context.appSub,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
