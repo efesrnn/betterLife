@@ -389,6 +389,55 @@ class HabitRepository {
         .order('milestone_day', ascending: true);
     return (data as List).map((e) => Milestone.fromJson(e)).toList();
   }
+
+  // ========================================================
+  // PUBLIC PROFILE (herkes herkesi görebilir — SECURITY DEFINER RPC)
+  // ========================================================
+
+  /// Bir kullanıcının (herkese açık) aktif alışkanlıkları.
+  Future<List<PublicHabit>> getUserHabitsPublic(String userId) async {
+    final data = await _client
+        .rpc('get_user_habits_public', params: {'p_user_id': userId});
+    return (data as List)
+        .map((e) => PublicHabit.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Bir kullanıcının son N aktivitesi (yeni habit / günlük log / milestone).
+  Future<List<ActivityItem>> getUserActivityFeed(String userId,
+      {int limit = 20}) async {
+    final data = await _client.rpc('get_user_activity_feed',
+        params: {'p_user_id': userId, 'p_limit': limit});
+    return (data as List)
+        .map((e) => ActivityItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Verilen kullanıcıların BU AYKİ skoru + en yüksek habit serisi.
+  /// Aylık skor = bu ayki günlük puanlar + combo bonusları (her ay sıfırlanır).
+  /// best_streak = aktif habitler arasında en yüksek current_streak.
+  Future<Map<String, UserScore>> getMonthlyScores(List<String> userIds) async {
+    if (userIds.isEmpty) return {};
+    final data = await _client
+        .rpc('get_monthly_scores', params: {'p_user_ids': userIds});
+    final map = <String, UserScore>{};
+    for (final row in (data as List)) {
+      map[row['user_id'].toString()] = UserScore(
+        monthly: (row['monthly_score'] as num?)?.toDouble() ?? 0,
+        bestStreak: (row['best_streak'] as num?)?.toInt() ?? 0,
+      );
+    }
+    return map;
+  }
+
+  /// Bir habit'in puanının nasıl oluştuğu (şeffaf kırılım).
+  Future<ScoreBreakdown?> getHabitScoreBreakdown(String userHabitId) async {
+    final data = await _client.rpc('get_habit_score_breakdown',
+        params: {'p_user_habit_id': userHabitId});
+    final list = data as List;
+    if (list.isEmpty) return null;
+    return ScoreBreakdown.fromJson(list.first as Map<String, dynamic>);
+  }
 }
 
 // ============================================================
@@ -920,6 +969,170 @@ class Milestone {
       id: json['id'], milestoneDay: json['milestone_day'],
       bonusPoints: (json['bonus_points'] as num).toDouble(),
       achievedAt: DateTime.parse(json['achieved_at']),
+    );
+  }
+}
+
+// ============================================================
+// PUBLIC PROFILE MODELS
+// ============================================================
+
+/// Herkese açık profilde gösterilen alışkanlık (get_user_habits_public).
+class PublicHabit {
+  final String userHabitId;
+  final String programType;
+  final String slug;
+  final String titleTr;
+  final String titleEn;
+  final String? icon;
+  final String? unit;
+  final double? startValue;
+  final double? targetValue;
+  final double? currentDailyTarget;
+  final int currentStreak;
+  final int longestStreak;
+  final double habitTotalScore;
+  final DateTime? startedAt;
+
+  PublicHabit({
+    required this.userHabitId,
+    required this.programType,
+    required this.slug,
+    required this.titleTr,
+    required this.titleEn,
+    this.icon,
+    this.unit,
+    this.startValue,
+    this.targetValue,
+    this.currentDailyTarget,
+    this.currentStreak = 0,
+    this.longestStreak = 0,
+    this.habitTotalScore = 0,
+    this.startedAt,
+  });
+
+  String title(String locale) => locale == 'tr' ? titleTr : titleEn;
+  bool get isQuit => programType == 'QUIT';
+
+  factory PublicHabit.fromJson(Map<String, dynamic> json) {
+    return PublicHabit(
+      userHabitId: json['user_habit_id']?.toString() ?? '',
+      programType: json['program_type']?.toString() ?? 'QUIT',
+      slug: json['slug']?.toString() ?? '',
+      titleTr: json['title_tr'] ?? '',
+      titleEn: json['title_en'] ?? '',
+      icon: json['icon'],
+      unit: json['unit'],
+      startValue: (json['start_value'] as num?)?.toDouble(),
+      targetValue: (json['target_value'] as num?)?.toDouble(),
+      currentDailyTarget: (json['current_daily_target'] as num?)?.toDouble(),
+      currentStreak: json['current_streak'] ?? 0,
+      longestStreak: json['longest_streak'] ?? 0,
+      habitTotalScore: (json['habit_total_score'] as num?)?.toDouble() ?? 0,
+      startedAt: json['started_at'] != null
+          ? DateTime.tryParse(json['started_at'].toString())
+          : null,
+    );
+  }
+}
+
+/// Aktivite akışı öğesi (get_user_activity_feed). kind: STARTED | LOG | MILESTONE
+class ActivityItem {
+  final String kind;
+  final DateTime ts;
+  final String slug;
+  final String titleTr;
+  final String titleEn;
+  final String? icon;
+  final String? unit;
+  final double? value;
+  final bool? isSuccess;
+  final int? milestoneDay;
+
+  ActivityItem({
+    required this.kind,
+    required this.ts,
+    required this.slug,
+    required this.titleTr,
+    required this.titleEn,
+    this.icon,
+    this.unit,
+    this.value,
+    this.isSuccess,
+    this.milestoneDay,
+  });
+
+  String title(String locale) => locale == 'tr' ? titleTr : titleEn;
+
+  factory ActivityItem.fromJson(Map<String, dynamic> json) {
+    return ActivityItem(
+      kind: json['kind']?.toString() ?? 'LOG',
+      ts: DateTime.tryParse(json['ts'].toString())?.toLocal() ??
+          DateTime.now(),
+      slug: json['slug']?.toString() ?? '',
+      titleTr: json['title_tr'] ?? '',
+      titleEn: json['title_en'] ?? '',
+      icon: json['icon'],
+      unit: json['unit'],
+      value: (json['value'] as num?)?.toDouble(),
+      isSuccess: json['is_success'] as bool?,
+      milestoneDay: json['milestone_day'] as int?,
+    );
+  }
+}
+
+/// Leaderboard skoru: bu ayki puan + en yüksek habit serisi.
+class UserScore {
+  final double monthly;
+  final int bestStreak;
+  UserScore({this.monthly = 0, this.bestStreak = 0});
+}
+
+/// Bir habit puanının şeffaf kırılımı (get_habit_score_breakdown).
+class ScoreBreakdown {
+  final double baseDailyPoints;
+  final double difficultyWeight;
+  final double streakMultiplierCap;
+  final int currentStreak;
+  final int daysLogged;
+  final double sumBase;
+  final double sumStreakBonus;
+  final double sumEffortBonus;
+  final double sumActivityBonus;
+  final double sumMilestoneBonus;
+  final double sumPenalty;
+  final double total;
+
+  ScoreBreakdown({
+    this.baseDailyPoints = 0,
+    this.difficultyWeight = 1,
+    this.streakMultiplierCap = 1,
+    this.currentStreak = 0,
+    this.daysLogged = 0,
+    this.sumBase = 0,
+    this.sumStreakBonus = 0,
+    this.sumEffortBonus = 0,
+    this.sumActivityBonus = 0,
+    this.sumMilestoneBonus = 0,
+    this.sumPenalty = 0,
+    this.total = 0,
+  });
+
+  factory ScoreBreakdown.fromJson(Map<String, dynamic> j) {
+    double d(String k) => (j[k] as num?)?.toDouble() ?? 0;
+    return ScoreBreakdown(
+      baseDailyPoints: d('base_daily_points'),
+      difficultyWeight: d('difficulty_weight'),
+      streakMultiplierCap: d('streak_multiplier_cap'),
+      currentStreak: (j['current_streak'] as num?)?.toInt() ?? 0,
+      daysLogged: (j['days_logged'] as num?)?.toInt() ?? 0,
+      sumBase: d('sum_base'),
+      sumStreakBonus: d('sum_streak_bonus'),
+      sumEffortBonus: d('sum_effort_bonus'),
+      sumActivityBonus: d('sum_activity_bonus'),
+      sumMilestoneBonus: d('sum_milestone_bonus'),
+      sumPenalty: d('sum_penalty'),
+      total: d('total'),
     );
   }
 }

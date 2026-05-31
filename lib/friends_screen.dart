@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_theme.dart';
 import 'app_strings.dart';
+import 'user_profile_screen.dart';
+import 'services/habit_repository.dart';
 
 // Bir profilin "temiz gün" sayısını (quit_date'ten bugüne) hesaplar.
 // Tüm alışkanlıklar için ortak bir rekabet metriğidir.
@@ -93,8 +95,24 @@ class _FriendsScreenState extends State<FriendsScreen> {
       }
     }
 
-    // Streak'e (temiz gün) göre azalan sırada sırala
-    list.sort((a, b) => streakDaysOf(b).compareTo(streakDaysOf(a)));
+    // Aylık puanları getir → leaderboard PUANA göre sıralanır (her ay sıfırlanır).
+    // Streak hâlâ tutulur ve gösterilir, ama sıralama puana göredir.
+    try {
+      final ids = list.map((e) => e['id'].toString()).toList();
+      final scores = await HabitRepository().getMonthlyScores(ids);
+      for (final e in list) {
+        final s = scores[e['id'].toString()];
+        e['_score'] = s?.monthly ?? 0.0;
+        e['_streak'] = s?.bestStreak ?? 0;
+      }
+    } catch (_) {
+      for (final e in list) {
+        e['_score'] = 0.0;
+        e['_streak'] = 0;
+      }
+    }
+    list.sort((a, b) =>
+        (b['_score'] as double).compareTo(a['_score'] as double));
 
     if (!mounted) return;
     setState(() {
@@ -249,36 +267,51 @@ class _FriendsScreenState extends State<FriendsScreen> {
         ),
         Divider(color: context.appBorder, height: 1),
         Expanded(
-          child: _filtered.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+          child: RefreshIndicator(
+            color: context.appAccent,
+            onRefresh: () async {
+              await _fetchLeaderboard();
+              await _fetchPendingCount();
+            },
+            child: _filtered.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     children: [
-                      Icon(Icons.people_outline_rounded,
-                          size: 52, color: context.appSub),
-                      const SizedBox(height: 12),
-                      Text(AppStrings.noFriendsYet,
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: context.appSub)),
-                      const SizedBox(height: 4),
-                      Text(AppStrings.addSomeoneToStart,
-                          style: TextStyle(
-                              fontSize: 13, color: context.appTextDim)),
+                      SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.28),
+                      Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.people_outline_rounded,
+                                size: 52, color: context.appSub),
+                            const SizedBox(height: 12),
+                            Text(AppStrings.noFriendsYet,
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: context.appSub)),
+                            const SizedBox(height: 4),
+                            Text(AppStrings.addSomeoneToStart,
+                                style: TextStyle(
+                                    fontSize: 13, color: context.appTextDim)),
+                          ],
+                        ),
+                      ),
                     ],
+                  )
+                : ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(20),
+                    itemCount: _filtered.length,
+                    itemBuilder: (context, i) {
+                      // Sıra (rank) tüm liste içindeki gerçek konuma göre
+                      final entry = _filtered[i];
+                      final rank = _all.indexOf(entry) + 1;
+                      return _leaderboardTile(context, entry, rank);
+                    },
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(20),
-                  itemCount: _filtered.length,
-                  itemBuilder: (context, i) {
-                    // Sıra (rank) tüm liste içindeki gerçek konuma göre
-                    final entry = _filtered[i];
-                    final rank = _all.indexOf(entry) + 1;
-                    return _leaderboardTile(context, entry, rank);
-                  },
-                ),
+          ),
         ),
       ],
     );
@@ -290,12 +323,24 @@ class _FriendsScreenState extends State<FriendsScreen> {
     final username = (entry['username'] ?? AppStrings.unknown).toString();
     final initials = username.isNotEmpty ? username[0].toUpperCase() : '?';
     final avatarUrl = entry['avatar_url'] as String?;
-    final streak = streakDaysOf(entry);
+    // Leaderboard streak'i = habitler arası EN YÜKSEK current_streak (RPC'den).
+    final streak = entry['_streak'] as int? ?? 0;
     final double totalSaved = (entry['total_saved'] ?? 0.0).toDouble();
     final isCigarette =
         (entry['habit'] ?? '').toString().toLowerCase().contains('cigarette');
 
-    return Container(
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => UserProfileScreen(
+            userId: entry['id'].toString(),
+            profile: entry,
+            isMe: isMe,
+          ),
+        ),
+      ),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -344,9 +389,23 @@ class _FriendsScreenState extends State<FriendsScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(AppStrings.dayStreakShort(streak),
-                    style: TextStyle(color: context.appSub, fontSize: 12)),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Text(
+                        '${(entry['_score'] as num? ?? 0).toStringAsFixed(0)} ${AppStrings.scorePts}',
+                        style: TextStyle(
+                            color: context.appAccent,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800)),
+                    const SizedBox(width: 10),
+                    Icon(Icons.local_fire_department_rounded,
+                        size: 13, color: context.appSub),
+                    const SizedBox(width: 2),
+                    Text('$streak',
+                        style: TextStyle(color: context.appSub, fontSize: 12)),
+                  ],
+                ),
                 if (isCigarette) ...[
                   const SizedBox(height: 2),
                   Text(
@@ -376,6 +435,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
               ),
             ),
         ],
+      ),
       ),
     );
   }

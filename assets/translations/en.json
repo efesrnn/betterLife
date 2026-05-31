@@ -274,5 +274,34 @@
     "merge_running": "Merging...",
     "merge_done": "Done — {merged} merged, {promoted} promoted",
     "merge_failed": "Merge failed: {error}"
+  },
+  "profile": {
+    "habits": "Habits",
+    "activity": "Recent activity",
+    "no_activity": "No activity yet",
+    "no_habits": "No habits yet"
+  },
+  "activity": {
+    "started": "Started tracking {habit}",
+    "logged": "{habit}: {value} {unit}",
+    "logged_clean": "{habit}: stayed clean",
+    "milestone": "{habit}: {n}-day milestone 🎉"
+  },
+  "score": {
+    "points": "pts",
+    "this_month": "This month",
+    "total": "Total"
+  },
+  "breakdown": {
+    "title": "How is this score calculated?",
+    "formula": "Each logged day: base points × difficulty (set by AI) × streak multiplier, plus bonuses.",
+    "base": "Base points / day",
+    "difficulty": "Difficulty (AI)",
+    "streak_mult": "Max streak multiplier",
+    "days": "Days logged",
+    "streak_bonus": "Streak bonus total",
+    "milestone_bonus": "Milestone bonus",
+    "penalty": "Penalty",
+    "total": "Total habit score"
   }
 }

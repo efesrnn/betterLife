@@ -274,5 +274,34 @@
     "merge_running": "Birleştiriliyor...",
     "merge_done": "Tamam — {merged} birleşti, {promoted} yükseltildi",
     "merge_failed": "Birleştirme başarısız: {error}"
+  },
+  "profile": {
+    "habits": "Alışkanlıklar",
+    "activity": "Son aktiviteler",
+    "no_activity": "Henüz aktivite yok",
+    "no_habits": "Henüz alışkanlık yok"
+  },
+  "activity": {
+    "started": "{habit} takibine başladı",
+    "logged": "{habit}: {value} {unit}",
+    "logged_clean": "{habit}: temiz kaldı",
+    "milestone": "{habit}: {n}. gün dönüm noktası 🎉"
+  },
+  "score": {
+    "points": "puan",
+    "this_month": "Bu ay",
+    "total": "Toplam"
+  },
+  "breakdown": {
+    "title": "Bu puan nasıl hesaplandı?",
+    "formula": "Her loglanan gün: taban puan × zorluk (yapay zeka belirler) × seri çarpanı, artı bonuslar.",
+    "base": "Gün başına taban puan",
+    "difficulty": "Zorluk (yapay zeka)",
+    "streak_mult": "Maks. seri çarpanı",
+    "days": "Loglanan gün",
+    "streak_bonus": "Toplam seri bonusu",
+    "milestone_bonus": "Milestone bonusu",
+    "penalty": "Ceza",
+    "total": "Toplam habit puanı"
   }
 }

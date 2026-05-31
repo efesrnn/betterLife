@@ -66,24 +66,11 @@ class _HabitSelectionScreenState extends State<HabitSelectionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Oval "Better Life" logosu
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: context.appAccent, width: 2),
-                  borderRadius:
-                      const BorderRadius.all(Radius.elliptical(160, 70)),
-                ),
-                child: Text(
-                  AppStrings.appName,
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1,
-                    color: context.appAccent,
-                  ),
-                ),
+              // "Better Life" logosu
+              Image.asset(
+                'assets/app-logo/better_life_logo.png',
+                height: 160,
+                fit: BoxFit.contain,
               ),
               const SizedBox(height: 48),
 

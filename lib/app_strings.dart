@@ -297,4 +297,36 @@ class AppStrings {
           namedArgs: {'merged': '$merged', 'promoted': '$promoted'});
   static String adminMergeFailed(Object e) =>
       'admin.merge_failed'.tr(namedArgs: {'error': e.toString()});
+
+  // ── Profil / aktivite akışı ─────────────────────────────
+  static String get profileHabits => 'profile.habits'.tr();
+  static String get profileActivity => 'profile.activity'.tr();
+  static String get profileNoActivity => 'profile.no_activity'.tr();
+  static String get profileNoHabits => 'profile.no_habits'.tr();
+  static String activityStarted(String habit) =>
+      'activity.started'.tr(namedArgs: {'habit': habit});
+  static String activityLogged(String habit, String value, String unit) =>
+      'activity.logged'
+          .tr(namedArgs: {'habit': habit, 'value': value, 'unit': unit});
+  static String activityLoggedClean(String habit) =>
+      'activity.logged_clean'.tr(namedArgs: {'habit': habit});
+  static String activityMilestone(String habit, int n) =>
+      'activity.milestone'.tr(namedArgs: {'habit': habit, 'n': '$n'});
+
+  // ── Skor ────────────────────────────────────────────────
+  static String get scorePts => 'score.points'.tr();
+  static String get scoreThisMonth => 'score.this_month'.tr();
+  static String get scoreTotal => 'score.total'.tr();
+
+  // ── Puan kırılımı (şeffaflık) ───────────────────────────
+  static String get bdTitle => 'breakdown.title'.tr();
+  static String get bdFormula => 'breakdown.formula'.tr();
+  static String get bdBase => 'breakdown.base'.tr();
+  static String get bdDifficulty => 'breakdown.difficulty'.tr();
+  static String get bdStreakMult => 'breakdown.streak_mult'.tr();
+  static String get bdDays => 'breakdown.days'.tr();
+  static String get bdStreakBonus => 'breakdown.streak_bonus'.tr();
+  static String get bdMilestoneBonus => 'breakdown.milestone_bonus'.tr();
+  static String get bdPenalty => 'breakdown.penalty'.tr();
+  static String get bdTotal => 'breakdown.total'.tr();
 }
