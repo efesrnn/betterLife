@@ -394,3 +394,17 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # declarative_schema_path = "./declarative"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# ── Edge Functions ──────────────────────────────────────────
+# ES256 (asimetrik JWT) ile gateway "Unsupported JWT algorithm" hatası
+# verdiği için gateway doğrulaması kapatıldı. Fonksiyonlar kendi auth'unu
+# yapıyor: search-similar-habit service_role kullanır; diğer ikisi
+# Authorization header ile auth.getUser() çağırır.
+[functions.search-similar-habit]
+verify_jwt = false
+
+[functions.calculate-daily-score]
+verify_jwt = false
+
+[functions.check-combo-bonus]
+verify_jwt = false

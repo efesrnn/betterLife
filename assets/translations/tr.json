@@ -1,15 +1,231 @@
 {
-  "app": {
-    "name": "Better Life"
+  "general": {
+    "app_name": "Better Life",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "remove": "Kaldır"
   },
-
+  "auth": {
+    "welcome_back": "TEKRAR HOŞ GELDİN",
+    "start_journey": "YOLCULUĞA BAŞLA",
+    "login": "GİRİŞ YAP",
+    "sign_up": "KAYIT OL",
+    "email": "E-posta",
+    "password": "Şifre",
+    "no_account": "Hesabın yok mu? Buradan kayıt ol.",
+    "have_account": "Zaten hesabın var mı? Buradan giriş yap.",
+    "enter_email_password": "Lütfen e-posta ve şifre gir.",
+    "too_many_attempts": "Çok fazla deneme yapıldı. Lütfen birkaç dakika sonra tekrar dene.",
+    "unexpected_error": "Beklenmeyen bir hata oluştu."
+  },
+  "verify": {
+    "title": "E-postanı Doğrula",
+    "subtitle": "Doğrulama bağlantısını gönderdiğimiz adres:",
+    "hint": "Devam etmek için e-postadaki bağlantıya tıkla.",
+    "resend": "E-postayı Tekrar Gönder",
+    "resend_in": "{s} sn sonra tekrar gönder",
+    "resent_to": "Doğrulama e-postası {email} adresine tekrar gönderildi",
+    "failed_to_resend": "Tekrar gönderilemedi: {error}",
+    "wrong_email": "Yanlış e-posta mı? Geri dön"
+  },
+  "habit_select": {
+    "choose": "ÜSTESİNDEN GELMEK\nİSTEDİĞİN ALIŞKANLIK",
+    "other_hint": "Diğer... (Yaz)"
+  },
+  "goal_select": {
+    "title": "Hedefin Ne?",
+    "quit_once": "Tek seferde tamamen bırak.",
+    "quit_step": "Adım adım azaltarak tamamen bırak.",
+    "reduce_by": "Şu kadar azalt: ",
+    "reduce_step": "Adım adım azalt",
+    "percentage": "Yüzde"
+  },
+  "username": {
+    "title": "SANA NASIL\nHİTAP EDELİM?",
+    "enter": "Kullanıcı adı gir...",
+    "min_chars": "En az 3 karakter gerekli."
+  },
+  "home": {
+    "habit_today": "bugün\n{habit}.",
+    "cigarettes_today": "bugün içilen\nsigara.",
+    "total_saved": "TOPLAM TASARRUF",
+    "daily_target": "Günlük hedef: ₺{amount}",
+    "smoked_of": "{count} / {baseline} içildi",
+    "remaining": "{n} kaldı",
+    "exceeded": "Aşıldı!",
+    "clean_time": "Temiz süre",
+    "saved_short": "Tasarruf",
+    "lungs_short": "Akciğer iyileşmesi",
+    "if_continued": "Devam etseydin",
+    "next_label": "SONRAKİ",
+    "streak_label": "Seri",
+    "life_contribution": "Hayatına katkı",
+    "keep_going": "Her gün daha güçlü",
+    "days_clean": "gün temiz",
+    "relapse_btn": "Bugün kaçamak yaptım",
+    "today_target": "Bugünkü hedef",
+    "log_today": "Bugünü logla",
+    "logged_today": "Bugün loglandı",
+    "calendar_title": "Bu ay"
+  },
+  "checkin": {
+    "title": "Günlük Yoklama",
+    "slip_up": "Uzaktayken {habit} konusunda kaçamak yaptın mı?",
+    "smoked": "Uzaktayken hiç sigara içtin mi?",
+    "stayed_strong": "Hayır, güçlü kaldım!",
+    "reminder_body": "Bugün loglanacak {n} alışkanlığın var.",
+    "go_log": "Logla"
+  },
+  "cigarette": {
+    "info": "Sigara Bilgisi",
+    "price_check": "Fiyat Kontrolü!",
+    "price_check_body": "2 ay oldu! Sigara fiyatları değişti mi?",
+    "pack_price": "Paket Fiyatı (TL)",
+    "cigs_per_pack": "Paket Başına Sigara",
+    "daily_cigs": "Günlük içilen sigara",
+    "save_settings": "Ayarları Kaydet"
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "appearance": "GÖRÜNÜM",
+    "account_info": "HESAP BİLGİSİ",
+    "email_address": "E-posta Adresi",
+    "change_username": "KULLANICI ADINI DEĞİŞTİR",
+    "new_username": "Yeni Kullanıcı Adı",
+    "save_username": "Kullanıcı Adını Kaydet",
+    "change_password": "ŞİFREYİ DEĞİŞTİR",
+    "new_password": "Yeni Şifre",
+    "save_new_password": "Yeni Şifreyi Kaydet",
+    "theme": "Tema",
+    "dark_mode": "Koyu mod",
+    "light_mode": "Açık mod",
+    "username_min3": "Kullanıcı adı en az 3 karakter olmalı.",
+    "username_taken": "Bu kullanıcı adı zaten alınmış!",
+    "username_updated": "Kullanıcı adı güncellendi!",
+    "password_min6": "Şifre en az 6 karakter olmalı.",
+    "password_updated": "Şifre güncellendi!",
+    "error": "Hata: {error}",
+    "language": "Dil",
+    "language_label": "DİL",
+    "turkish": "Türkçe",
+    "english": "English"
+  },
+  "nav": {
+    "home": "Ana Sayfa"
+  },
+  "drawer": {
+    "default_user": "KULLANICI",
+    "logout": "Çıkış Yap",
+    "uploading_photo": "Fotoğraf yükleniyor...",
+    "photo_updated": "Profil fotoğrafı güncellendi!",
+    "error_uploading": "Yükleme hatası: {error}",
+    "days_streak": "{n} GÜNLÜK SERİ"
+  },
+  "lungs": {
+    "tab": "Akciğer",
+    "lung_health": "Akciğer Sağlığı",
+    "recovery_milestones": "İyileşme Aşamaları",
+    "health": "SAĞLIK",
+    "recovery_progress": "İyileşme Süreci"
+  },
+  "friends": {
+    "tab": "Arkadaşlar",
+    "leaderboard": "Sıralama",
+    "find_friend": "Arkadaş bul...",
+    "no_friends_yet": "Henüz arkadaş yok",
+    "add_someone": "Başlamak için birini ekle",
+    "remove_friend": "Arkadaşı Çıkar",
+    "remove_confirm": "{username} arkadaşlıktan çıkarılsın mı?",
+    "quitting": "{habit} bırakıyor",
+    "quitting_default": "kötü bir alışkanlık",
+    "saved": "₺{amount} biriktirdi",
+    "you": "Sen",
+    "day_streak": "{n} günlük seri",
+    "requests": "Arkadaşlık İstekleri",
+    "no_pending": "Bekleyen istek yok.",
+    "discover": "Kişileri Keşfet",
+    "no_other_users": "Henüz başka kullanıcı yok.",
+    "request_sent_to": "{username} kişisine istek gönderildi!",
+    "accepted_request": "{name} arkadaşlık isteğini kabul etti!",
+    "someone": "Birisi",
+    "unknown": "Bilinmiyor"
+  },
+  "program_types": {
+    "QUIT": "Tamamen bırak",
+    "GRADUAL_DECREASE": "Kademeli azaltarak bırak",
+    "REDUCE": "Azalt",
+    "GRADUAL_INCREASE": "Kademeli artır",
+    "MAINTAIN": "Koru"
+  },
+  "categories": {
+    "ADDICTION": "Bağımlılık",
+    "FITNESS": "Fitness",
+    "NUTRITION": "Beslenme",
+    "MENTAL": "Zihinsel",
+    "HEALTH": "Sağlık",
+    "DIGITAL_WELLNESS": "Dijital Sağlık"
+  },
+  "risk_levels": {
+    "LOW": "Düşük",
+    "MEDIUM": "Orta",
+    "HIGH": "Yüksek",
+    "CRITICAL": "Kritik"
+  },
+  "habits": {
+    "tab": "Alışkanlıklar",
+    "my_habits": "Alışkanlıklarım",
+    "add": "Alışkanlık Ekle",
+    "catalog": "Kataloğa Göz At",
+    "empty_title": "Henüz alışkanlık yok",
+    "empty_sub": "Takibe başlamak için bir alışkanlık ekle",
+    "name_hint": "örn. kahveyi bırak, daha az ekran...",
+    "evaluate": "Değerlendir",
+    "evaluating": "Yapay zeka ile değerlendiriliyor...",
+    "invalid": "Geçerli bir alışkanlık olarak tanınmadı",
+    "exact_found": "Bu alışkanlık zaten mevcut",
+    "new_created": "Yeni alışkanlık oluşturuldu!",
+    "maybe_found": "Bunlardan birini mi demek istedin?",
+    "choose_program": "Bir program seç",
+    "add_button": "Alışkanlıklarıma ekle",
+    "added": "Alışkanlık eklendi!",
+    "day_streak": "{n} günlük seri",
+    "catalog_title": "Alışkanlık Kataloğu",
+    "no_catalog": "Katalogda henüz alışkanlık yok",
+    "lung_health": "Akciğer Sağlığı",
+    "remove": "Alışkanlığı kaldır",
+    "remove_confirm": "{habit} takibi bırakılsın mı?",
+    "paused": "Duraklatıldı",
+    "similarity": "eşleşme"
+  },
+  "detail": {
+    "title": "Alışkanlık Detayı",
+    "impact": "Etki",
+    "health": "Sağlık",
+    "mental": "Zihinsel disiplin",
+    "financial": "Finansal",
+    "time": "Zaman",
+    "social": "Sosyal",
+    "scoring": "Puanlama",
+    "base_points": "Taban puan",
+    "difficulty": "Zorluk",
+    "streak": "Mevcut seri",
+    "longest": "En uzun seri",
+    "risk": "Risk seviyesi",
+    "category": "Kategori",
+    "program": "Program",
+    "target": "Günlük hedef",
+    "started": "Başlangıç",
+    "description": "Açıklama",
+    "ai_notes": "Yapay zeka analizi",
+    "edit_plan": "Planı düzenle",
+    "updated": "Alışkanlık güncellendi"
+  },
   "habit_search": {
     "exact_match": "Bu alışkanlık zaten sistemde kayıtlı.",
     "maybe_match": "Benzer bir alışkanlık bulundu. Bunu mu demek istediniz?",
     "invalid_habit": "Geçerli bir alışkanlık olarak tanımlanamadı.",
     "new_habit_created": "Yeni alışkanlık başarıyla oluşturuldu."
   },
-
   "errors": {
     "input_required": "Girdi gerekli (en az 2 karakter)",
     "missing_auth": "Yetkilendirme başlığı eksik",
@@ -27,74 +243,36 @@
     "internal_error": "Sunucu hatası",
     "combo_check_failed": "Combo kontrolü başarısız"
   },
-
-  "combo": {
-    "need_at_least_2": "Combo bonus için en az 2 aktif streak gerekli",
-    "cooldown_active": "Sonraki combo bonusu {} gün sonra",
-    "bonus_awarded": "+{} combo bonus puanı kazanıldı!"
+  "add": {
+    "details_title": "Planını ayarla",
+    "pick_from_catalog": "Katalogdan seç",
+    "or_create_ai": "Listede yok mu? Yapay zeka ile yeni ekle",
+    "search_hint": "Ara: sigara, alkol, ekran süresi...",
+    "create_anyway": "Yine de yeni oluştur",
+    "no_catalog_match": "Katalogda eşleşme yok — yapay zeka ile ekle",
+    "ai_suggest_title": "Benzer alışkanlık(lar) zaten var",
+    "evaluate_input": "\"{q}\" ifadesini yapay zeka ile değerlendir",
+    "start_amount": "Normalde günde ne kadar?",
+    "target_amount": "Günlük hedef miktar",
+    "unit_cost": "Birim başına maliyet (₺, opsiyonel)",
+    "duration": "Ne kadar sürede?",
+    "weeks": "hafta",
+    "months": "ay",
+    "schedule_preview": "Otomatik plan: {n} günde {from} → {to} {unit}"
   },
-
-  "program_types": {
-    "QUIT": "Direkt Bırakma",
-    "GRADUAL_DECREASE": "Kademeli Azaltarak Bırakma",
-    "REDUCE": "Azaltma",
-    "GRADUAL_INCREASE": "Kademeli Artırma",
-    "MAINTAIN": "Hedefi Koruma"
+  "program_desc": {
+    "QUIT": "Şimdi tamamen bırak — günlük sayaç yok, sadece temiz kal",
+    "GRADUAL_DECREASE": "Belirli sürede kademeli azaltarak sıfıra indir",
+    "REDUCE": "Bir hedefe indir ve orada tut",
+    "GRADUAL_INCREASE": "Zamanla kademeli olarak artır",
+    "MAINTAIN": "Mevcut seviyeni koru"
   },
-
-  "categories": {
-    "ADDICTION": "Bağımlılık",
-    "FITNESS": "Fitness",
-    "NUTRITION": "Beslenme",
-    "MENTAL": "Zihinsel",
-    "HEALTH": "Sağlık",
-    "DIGITAL_WELLNESS": "Dijital Sağlık"
-  },
-
-  "risk_levels": {
-    "LOW": "Düşük",
-    "MEDIUM": "Orta",
-    "HIGH": "Yüksek",
-    "CRITICAL": "Kritik"
-  },
-
-  "scoring": {
-    "base_points": "Taban Puan",
-    "streak_bonus": "Streak Bonusu",
-    "effort_bonus": "Efor Bonusu",
-    "activity_bonus": "Aktivite Bonusu",
-    "penalty": "Ceza",
-    "milestone_bonus": "Dönüm Noktası Bonusu",
-    "combo_bonus": "Combo Bonusu",
-    "total": "Toplam"
-  },
-
-  "streak": {
-    "current": "Mevcut Streak",
-    "longest": "En Uzun Streak",
-    "days": "{} gün"
-  },
-
-  "dashboard": {
-    "total_score": "Toplam Puan",
-    "weekly_score": "Haftalık Puan",
-    "active_habits": "Aktif Alışkanlıklar",
-    "logged_today": "Bugün tamamlandı",
-    "not_logged": "Bugün girilmedi",
-    "combo_next_bonus": "Sonraki combo bonusu: {} gün"
-  },
-
-  "leaderboard": {
-    "title": "Sıralama",
-    "rank": "Sıra",
-    "score": "Puan"
-  },
-
-  "friends": {
-    "add": "Arkadaş Ekle",
-    "pending": "Bekleyen İstekler",
-    "accept": "Kabul Et",
-    "reject": "Reddet",
-    "request_sent": "İstek gönderildi"
+  "admin": {
+    "title": "ADMIN",
+    "merge_now": "Benzer alışkanlıkları şimdi birleştir",
+    "merge_desc": "Normalde her 24 saatte bir çalışır. Aynı ya da çok benzer alışkanlıkları (farklı dillerde olsa bile) tek bir çatı altında toplar.",
+    "merge_running": "Birleştiriliyor...",
+    "merge_done": "Tamam — {merged} birleşti, {promoted} yükseltildi",
+    "merge_failed": "Birleştirme başarısız: {error}"
   }
 }

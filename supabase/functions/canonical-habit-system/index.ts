@@ -1,11 +1,14 @@
 // ============================================================
 // HabitQuest - search-similar-habit Edge Function
 //
-// KEY-BASED i18n: Returns message_key, NOT translated text.
-// Flutter's easy_localization handles all translations.
+// KEY-BASED i18n + CANONICAL HABIT SYSTEM
 //
-// CROSS-LANGUAGE MATCHING: Stores embeddings for all supported
-// locale titles so "video games" matches "Bilgisayar Oyunları".
+// New habits created here are marked is_classified=false.
+// The 12h deduplicate-habits batch job will later:
+//   - Merge duplicates into canonical (alias pointer)
+//   - Promote unique ones to canonical
+//
+// Embedding search still works immediately (multi-locale).
 // ============================================================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -15,17 +18,10 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
 
-// text-embedding-004 14 Ocak 2026'da kapatıldı; güncel model gemini-embedding-001.
-const EMBEDDING_MODEL = "gemini-embedding-001";
-// Embedding boyutu: migration'daki habit_embeddings.embedding vector(768) ile
-// eşleşmesi için outputDimensionality=768 isteniyor (aşağıda).
-const EMBEDDING_DIM = 768;
-const FLASH_MODEL = "gemini-2.5-flash";
-// Eşikler sıkılaştırıldı: 0.6 çok gevşekti ("computer games" ↔ cannabis %70
-// gibi alakasız eşleşmeler oluyordu). Artık yalnızca gerçekten yakın olanlar
-// "belki" sayılır; benzer çıksa bile kullanıcı yine de yeni ekleyebilir.
-const SIMILARITY_EXACT = 0.92;
-const SIMILARITY_MAYBE = 0.84;
+const EMBEDDING_MODEL = "text-embedding-004";
+const FLASH_MODEL = "gemini-2.5-flash-preview-05-20";
+const SIMILARITY_EXACT = 0.9;
+const SIMILARITY_MAYBE = 0.6;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,7 +39,6 @@ async function generateEmbedding(text: string): Promise<number[]> {
         model: `models/${EMBEDDING_MODEL}`,
         content: { parts: [{ text }] },
         taskType: "SEMANTIC_SIMILARITY",
-        outputDimensionality: EMBEDDING_DIM,
       }),
     }
   );
@@ -86,8 +81,7 @@ OUTPUT:
     "slug": string,
     "title_tr": string, "title_en": string,
     "description_tr": string, "description_en": string,
-    "icon": "TEK bir emoji karakteri (örn: 🚭 🍷 🎮 🎯) — kelime/isim DEĞİL",
-    "unit_tr": string, "unit_en": string
+    "icon": string, "unit_tr": string, "unit_en": string
   },
   "scoring_engine": {
     "base_daily_points": number, "difficulty_weight": number,
@@ -138,7 +132,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { user_input, locale = "en", force_new = false } = await req.json();
+    const { user_input, locale = "en" } = await req.json();
 
     if (!user_input || user_input.trim().length < 2) {
       return new Response(
@@ -150,92 +144,86 @@ serve(async (req: Request) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const embedding = await generateEmbedding(user_input);
 
-    // force_new=true → eşleştirmeyi atla, doğrudan yeni habit oluştur.
-    // (Kullanıcı "benzeri olsa da yeni ekle" dediğinde.) Spec gereği add
-    // anında benzerlik ENGELLEMEZ; günün sonunda Gemini birleştirme işi
-    // (cron) gerekirse bunları tek çatı altında toplar.
-    if (!force_new) {
-      const { data: rawMatches, error: matchError } = await supabase.rpc(
-        "match_habit_by_embedding",
-        { query_embedding: JSON.stringify(embedding), match_threshold: SIMILARITY_MAYBE, max_results: 8 }
-      );
-      if (matchError) throw new Error(`Vector search: ${matchError.message}`);
+    // Search ALL embeddings (all locales, canonical + alias)
+    const { data: matches, error: matchError } = await supabase.rpc(
+      "match_habit_by_embedding",
+      { query_embedding: JSON.stringify(embedding), match_threshold: SIMILARITY_MAYBE, max_results: 3 }
+    );
+    if (matchError) throw new Error(`Vector search: ${matchError.message}`);
 
-      // Her eşleşmeyi canonical'ına çöz (alias → canonical), SONRA canonical
-      // id'ye göre tekilleştir. Böylece hem aynı habit'in çoklu embedding'i
-      // (input/tr/en) hem de farklı dildeki alias'lar tek satıra iner; örn.
-      // "bilgisayar oyunu" araması birleştirme sonrası "ekran süresi" canonical'ını
-      // gösterir. resolve_canonical RPC'si yoksa ham eşleşmeyle devam eder.
-      const seen = new Set<string>();
-      const matches: any[] = [];
-      for (const m of ((rawMatches ?? []) as any[])) {
-        let resolved = m;
-        try {
-          const { data: rId } = await supabase.rpc("resolve_canonical", {
-            p_habit_id: m.habit_id,
-          });
-          if (rId && rId !== m.habit_id) {
-            const { data: rHabit } = await supabase
-              .from("habits")
-              .select("id, slug, title_tr, title_en")
-              .eq("id", rId)
-              .maybeSingle();
-            if (rHabit) {
-              resolved = {
-                habit_id: rHabit.id, slug: rHabit.slug,
-                title_tr: rHabit.title_tr, title_en: rHabit.title_en,
-                similarity: m.similarity,
-              };
-            }
-          }
-        } catch (_) {
-          // resolve_canonical yoksa ham eşleşmeyle devam
-        }
-        if (!seen.has(resolved.habit_id)) {
-          seen.add(resolved.habit_id);
-          matches.push(resolved);
-        }
-        if (matches.length >= 3) break;
+    if (matches && matches.length > 0) {
+      const top = matches[0];
+
+      // Resolve to canonical: if the match is an alias, follow the pointer
+      let resolvedHabitId = top.habit_id;
+      const { data: resolvedId } = await supabase.rpc("resolve_canonical", {
+        p_habit_id: top.habit_id,
+      });
+      if (resolvedId) resolvedHabitId = resolvedId;
+
+      // Fetch canonical habit data
+      const { data: canonicalHabit } = await supabase
+        .from("habits")
+        .select("id, slug, title_tr, title_en")
+        .eq("id", resolvedHabitId)
+        .single();
+
+      if (top.similarity >= SIMILARITY_EXACT && canonicalHabit) {
+        return new Response(
+          JSON.stringify({
+            action: "EXACT_MATCH",
+            message_key: "habit_search.exact_match",
+            match: {
+              habit_id: canonicalHabit.id,
+              slug: canonicalHabit.slug,
+              title_tr: canonicalHabit.title_tr,
+              title_en: canonicalHabit.title_en,
+              similarity: top.similarity,
+              resolved_from_alias: canonicalHabit.id !== top.habit_id,
+            },
+            gemini_called: false,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
-      if (matches.length > 0) {
-        const top = matches[0];
-
-        if (top.similarity >= SIMILARITY_EXACT) {
-          return new Response(
-            JSON.stringify({
-              action: "EXACT_MATCH",
-              message_key: "habit_search.exact_match",
-              match: {
-                habit_id: top.habit_id, slug: top.slug,
-                title_tr: top.title_tr, title_en: top.title_en,
-                similarity: top.similarity,
-              },
-              gemini_called: false,
-            }),
-            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        if (top.similarity >= SIMILARITY_MAYBE) {
-          return new Response(
-            JSON.stringify({
-              action: "MAYBE_MATCH",
-              message_key: "habit_search.maybe_match",
-              suggestions: matches.map((m) => ({
-                habit_id: m.habit_id, slug: m.slug,
-                title_tr: m.title_tr, title_en: m.title_en,
+      if (top.similarity >= SIMILARITY_MAYBE) {
+        // Resolve all suggestions to their canonicals
+        const resolvedSuggestions = [];
+        for (const m of matches) {
+          const { data: rId } = await supabase.rpc("resolve_canonical", { p_habit_id: m.habit_id });
+          const { data: rHabit } = await supabase
+            .from("habits")
+            .select("id, slug, title_tr, title_en")
+            .eq("id", rId || m.habit_id)
+            .single();
+          if (rHabit) {
+            // Avoid duplicate suggestions (multiple aliases → same canonical)
+            if (!resolvedSuggestions.some((s: any) => s.habit_id === rHabit.id)) {
+              resolvedSuggestions.push({
+                habit_id: rHabit.id,
+                slug: rHabit.slug,
+                title_tr: rHabit.title_tr,
+                title_en: rHabit.title_en,
                 similarity: m.similarity,
-              })),
-              gemini_called: false,
-            }),
-            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+              });
+            }
+          }
         }
+
+        return new Response(
+          JSON.stringify({
+            action: "MAYBE_MATCH",
+            message_key: "habit_search.maybe_match",
+            suggestions: resolvedSuggestions,
+            gemini_called: false,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
 
-    // New habit → Gemini
+    // No match → Gemini Flash → create as UNCLASSIFIED
     const result = await analyzeHabitWithGemini(user_input, locale);
 
     if (!result.is_valid) {
@@ -250,53 +238,47 @@ serve(async (req: Request) => {
       );
     }
 
-    // Gemini modele göre bazı alanları eksik/null döndürebilir.
-    // Null güvenliği: hepsini boş objeye düşür; eksik alanlar JSON.stringify
-    // tarafından atlanır ve DB kolon default'larına düşer.
-    const m = result.habit_metadata ?? {};
-    const s = result.scoring_engine ?? {};
-    const i = result.impact_matrix ?? {};
-    const p = result.progression ?? {};
-    const c = result.calorie_data ?? {};
-    const r = result.gemini_report ?? {};
+    const m = result.habit_metadata;
+    const s = result.scoring_engine;
+    const i = result.impact_matrix;
+    const p = result.progression;
+    const c = result.calorie_data;
+    const r = result.gemini_report;
 
-    // Zorunlu alanlar (slug/title NOT NULL) için kullanıcı girdisinden fallback.
-    const fallbackTitle = String(user_input).trim();
-    const fallbackSlug =
-      (m.slug ||
-        fallbackTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")) ||
-      `habit-${Date.now()}`;
-
+    // Create habit as UNCLASSIFIED — the 12h batch job will classify it
     const { data: newHabit, error: insertErr } = await supabase
       .from("habits")
       .insert({
-        internal_id: m.internal_id || fallbackSlug,
-        type: m.type || 'NEGATIVE_BYPASS', slug: fallbackSlug,
-        title_tr: m.title_tr || fallbackTitle, title_en: m.title_en || fallbackTitle,
+        internal_id: m.internal_id, type: m.type, slug: m.slug,
+        title_tr: m.title_tr, title_en: m.title_en,
         description_tr: m.description_tr, description_en: m.description_en,
         icon: m.icon, unit: m.unit_tr || m.unit || "",
         base_daily_points: s.base_daily_points, difficulty_weight: s.difficulty_weight,
         streak_multiplier_cap: s.streak_multiplier_cap, effort_multiplier: s.effort_multiplier,
         health_impact: i.health_impact, mental_discipline: i.mental_discipline,
         financial_impact: i.financial_impact, time_impact: i.time_impact, social_impact: i.social_impact,
-        target_direction: p.target_direction || 'DECREASE', default_start_value: p.default_start_value,
+        target_direction: p.target_direction, default_start_value: p.default_start_value,
         default_target_value: p.default_target_value, step_penalty_reward: p.step_penalty_reward,
         adaptation_coefficient: p.adaptation_coefficient,
         activity_converters: result.activity_converters, gemini_raw_response: result,
         category_tag: r.category_tag, risk_level: r.risk_level,
         calories_per_minute: c.calories_per_minute, calorie_to_point_rate: c.calorie_to_point_rate,
         analysis_version: "v2-flash-2.5", is_valid: true,
+        // CANONICAL SYSTEM FIELDS:
+        is_canonical: true,       // Starts as potential canonical
+        is_classified: false,     // 12h batch job will classify
+        source_locale: locale,    // Track which language it was created in
       })
       .select("id")
       .single();
 
     if (insertErr) throw new Error(`Insert: ${insertErr.message}`);
 
-    // Multi-locale embeddings
+    // Multi-locale embeddings for cross-language matching
     const embTexts = [
       { text: user_input, locale },
-      { text: `${m.title_tr || fallbackTitle}. ${m.description_tr || ""}`.trim(), locale: "tr" },
-      { text: `${m.title_en || fallbackTitle}. ${m.description_en || ""}`.trim(), locale: "en" },
+      { text: `${m.title_tr}. ${m.description_tr || ""}`.trim(), locale: "tr" },
+      { text: `${m.title_en}. ${m.description_en || ""}`.trim(), locale: "en" },
     ];
     const unique = embTexts.filter(
       (item, idx, arr) => idx === arr.findIndex((t) => t.text.toLowerCase() === item.text.toLowerCase())
@@ -318,6 +300,7 @@ serve(async (req: Request) => {
         suggested_programs: r.suggested_programs,
         gemini_called: true,
         embeddings_stored: unique.length,
+        classification_status: "pending_12h_batch",
       }),
       { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

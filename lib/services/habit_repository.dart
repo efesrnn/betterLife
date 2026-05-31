@@ -12,7 +12,36 @@
 //   }
 // ============================================================
 
+import 'dart:math' as math;
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// Kademeli (gradual) program için gün bazlı hedef.
+/// start → target arası, totalDays günde, geometrik (log-lineer) eğriyle:
+/// hızlı başlar, yavaşlar. dayIndex 0 = ilk gün.
+double gradualTargetForDay({
+  required double start,
+  required double target,
+  required int totalDays,
+  required int dayIndex,
+}) {
+  if (totalDays <= 0 || start <= 0) return target;
+  final t = (dayIndex / totalDays).clamp(0.0, 1.0);
+  final ratio = (target <= 0 ? 0.02 : target / start);
+  final val = start * math.pow(ratio, t).toDouble();
+  return val < target ? target : val;
+}
+
+/// Gemini bazen icon alanına emoji yerine "cannabis_leaf_slash" gibi bir
+/// isim döndürüyor. Bu yardımcı, gerçek bir emoji değilse varsayılana düşer.
+String safeHabitIcon(String? icon) {
+  final t = (icon ?? '').trim();
+  if (t.isEmpty) return '🎯';
+  // ASCII harf/rakam/alt çizgi/tire/boşluk → emoji değil (isim/slug)
+  if (RegExp(r'^[A-Za-z0-9_\-\s\.]+$').hasMatch(t)) return '🎯';
+  // Çok uzunsa da emoji değildir
+  if (t.runes.length > 3) return '🎯';
+  return t;
+}
 
 class HabitRepository {
   final SupabaseClient _client;
@@ -29,13 +58,20 @@ class HabitRepository {
   /// locale parameter is passed to backend so Gemini knows
   /// what language the user typed in. Does NOT affect error messages
   /// (those come as keys, Flutter translates them).
+  /// [forceNew] true ise backend benzerlik eşleştirmesini atlar ve doğrudan
+  /// yeni habit oluşturur (kullanıcı "benzeri olsa da yeni ekle" dediğinde).
   Future<HabitSearchResult> searchOrCreateHabit({
     required String userInput,
     String locale = 'tr',
+    bool forceNew = false,
   }) async {
     final response = await _client.functions.invoke(
       'search-similar-habit',
-      body: {'user_input': userInput, 'locale': locale},
+      body: {
+        'user_input': userInput,
+        'locale': locale,
+        'force_new': forceNew,
+      },
     );
 
     if (response.status != 200 && response.status != 201) {
@@ -57,14 +93,16 @@ class HabitRepository {
     double? phaseStepAmount,
     DateTime? targetDate,
     Map<String, dynamic>? milestoneConfig,
+    double? unitCost,
   }) async {
+    // maybeSingle: habit RLS/0-satır durumunda çökmemek için.
     final habit =
-    await _client.from('habits').select().eq('id', habitId).single();
+        await _client.from('habits').select().eq('id', habitId).maybeSingle();
 
     final effectiveStart =
-        startValue ?? (habit['default_start_value'] as num?)?.toDouble();
+        startValue ?? (habit?['default_start_value'] as num?)?.toDouble();
     final effectiveTarget =
-        targetValue ?? (habit['default_target_value'] as num?)?.toDouble();
+        targetValue ?? (habit?['default_target_value'] as num?)?.toDouble();
 
     double? initialDailyTarget;
     switch (programType) {
@@ -96,10 +134,21 @@ class HabitRepository {
       'phase_step_amount': phaseStepAmount,
       'target_date': targetDate?.toIso8601String(),
       'milestone_config': milestoneConfig,
+      'unit_cost': unitCost,
     })
         .select()
-        .single();
+        .maybeSingle();
 
+    // Insert başarılı ama RLS RETURNING'i gizlemiş olabilir → null gelebilir.
+    // Bu durumda eklendi kabul edip minimal nesne döndürürüz (çağıran zaten
+    // listeyi yeniden yüklüyor).
+    if (data == null) {
+      return UserHabit(
+        id: '', habitId: habitId, programType: programType,
+        startValue: effectiveStart, targetValue: effectiveTarget,
+        currentDailyTarget: initialDailyTarget,
+      );
+    }
     return UserHabit.fromJson(data);
   }
 
@@ -127,6 +176,63 @@ class HabitRepository {
           ? DateTime.now().toIso8601String()
           : null,
     }).eq('id', userHabitId);
+  }
+
+  /// Günlük değeri doğrudan submit_daily_log RPC ile loglar (edge function'sız).
+  /// Streak/puan/combo DB tarafında hesaplanır. Hata jsonb içinde döner.
+  Future<Map<String, dynamic>> logDailyValue(
+      String userHabitId, double reportedValue) async {
+    final res = await _client.rpc('submit_daily_log', params: {
+      'p_user_habit_id': userHabitId,
+      'p_reported_value': reportedValue,
+      'p_calories_burned': null,
+      'p_activity_entries': <dynamic>[],
+      'p_notes': null,
+    });
+    return (res is Map) ? Map<String, dynamic>.from(res) : <String, dynamic>{};
+  }
+
+  /// QUIT relapse: temiz sayacı sıfırla (started_at = şimdi, streak = 0).
+  Future<void> resetHabitStart(String userHabitId) async {
+    await _client.from('user_habits').update({
+      'started_at': DateTime.now().toIso8601String(),
+      'current_streak': 0,
+    }).eq('id', userHabitId);
+  }
+
+  /// Detay ekranından plan düzenleme: başlangıç (eski kullanım), hedef, maliyet.
+  /// Yalnızca verilen alanlar güncellenir. REDUCE'da current_daily_target da
+  /// hedefe çekilir ki Home/takvim tutarlı olsun.
+  Future<void> updateUserHabit({
+    required String userHabitId,
+    double? startValue,
+    double? targetValue,
+    double? unitCost,
+    bool syncDailyTargetToTarget = false,
+  }) async {
+    final patch = <String, dynamic>{};
+    if (startValue != null) patch['start_value'] = startValue;
+    if (targetValue != null) patch['target_value'] = targetValue;
+    if (unitCost != null) patch['unit_cost'] = unitCost;
+    if (syncDailyTargetToTarget && targetValue != null) {
+      patch['current_daily_target'] = targetValue;
+    }
+    if (patch.isEmpty) return;
+    await _client.from('user_habits').update(patch).eq('id', userHabitId);
+  }
+
+  /// Admin: benzer alışkanlıkları tek çatı altında toplayan 12/24 saatlik
+  /// birleştirme işini (duplicate-habits edge function) elle tetikler.
+  /// Dönüş: {status, merged, promoted, details, ...}
+  Future<Map<String, dynamic>> runHabitDeduplication() async {
+    final res = await _client.functions.invoke('duplicate-habits');
+    if (res.status != 200) {
+      throw HabitQuestException.fromResponse(
+          res.data is Map ? Map<String, dynamic>.from(res.data) : null);
+    }
+    return res.data is Map
+        ? Map<String, dynamic>.from(res.data)
+        : <String, dynamic>{};
   }
 
   // ========================================================
@@ -494,17 +600,31 @@ class UserHabit {
   final double habitTotalScore;
   final bool isActive;
   final String? lastLogDate;
+  final double unitCost;
+  final DateTime? startedAt;
+  final DateTime? targetDate;
   final Habit? habit;
 
   UserHabit({
     required this.id, required this.habitId, required this.programType,
     this.startValue, this.targetValue, this.currentDailyTarget,
     this.currentStreak = 0, this.longestStreak = 0, this.habitTotalScore = 0,
-    this.isActive = true, this.lastLogDate, this.habit,
+    this.isActive = true, this.lastLogDate, this.unitCost = 0,
+    this.startedAt, this.targetDate, this.habit,
   });
 
   String title(String locale) => habit?.title(locale) ?? '';
   String get programTitleKey => programType.titleKey;
+
+  /// QUIT/azalt için "temiz/aktif" başlangıç tarihi.
+  DateTime get sinceDate => startedAt ?? DateTime.now();
+
+  /// Bugün loglandı mı (last_log_date == bugün).
+  bool get loggedToday {
+    if (lastLogDate == null) return false;
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    return lastLogDate!.startsWith(today);
+  }
 
   factory UserHabit.fromJson(Map<String, dynamic> json) {
     return UserHabit(
@@ -518,6 +638,13 @@ class UserHabit {
       habitTotalScore: (json['habit_total_score'] as num?)?.toDouble() ?? 0,
       isActive: json['is_active'] ?? true,
       lastLogDate: json['last_log_date'],
+      unitCost: (json['unit_cost'] as num?)?.toDouble() ?? 0,
+      startedAt: json['started_at'] != null
+          ? DateTime.tryParse(json['started_at'].toString())
+          : null,
+      targetDate: json['target_date'] != null
+          ? DateTime.tryParse(json['target_date'].toString())
+          : null,
       habit: json['habits'] != null
           ? Habit.fromJson(json['habits'] as Map<String, dynamic>)
           : null,

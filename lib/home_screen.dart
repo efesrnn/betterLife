@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'app_theme.dart';
+import 'app_strings.dart';
 import 'auth_screen.dart';
 import 'friends_screen.dart';
-import 'lungs_screen.dart';
+import 'habits_screen.dart';
+import 'home_habit_view.dart';
 import 'settings_screen.dart';
+import 'services/habit_repository.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -255,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (image == null) return;
     try {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Uploading photo...')));
+          .showSnackBar(SnackBar(content: Text(AppStrings.uploadingPhoto)));
       final bytes = await image.readAsBytes();
       final fileExtension = image.path.split('.').last;
       final fileName =
@@ -271,14 +275,14 @@ class _HomeScreenState extends State<HomeScreen> {
       await prefs.setString('avatar_url_${user.id}', imageUrl);
       setState(() => _avatarUrl = imageUrl);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Profile photo updated!'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppStrings.photoUpdated),
             backgroundColor: Colors.green));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Error uploading: $e'),
+            content: Text(AppStrings.errorUploading(e)),
             backgroundColor: Colors.red));
       }
     }
@@ -301,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
             side: BorderSide(color: ctx.appBorder, width: 1.5),
           ),
           title: Text(
-            isReminder ? 'Price Check!' : 'Cigarette Info',
+            isReminder ? AppStrings.priceCheck : AppStrings.cigaretteInfo,
             style: TextStyle(
                 color: ctx.appText,
                 fontWeight: FontWeight.w900,
@@ -315,19 +319,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Text(
-                    'It has been 2 months! Have cigarette prices changed?',
+                    AppStrings.priceCheckBody,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         color: ctx.appTextDim, fontWeight: FontWeight.w600),
                   ),
                 ),
-              _dialogField(ctx, priceCtrl, 'Pack Price (TL)',
+              _dialogField(ctx, priceCtrl, AppStrings.packPrice,
                   Icons.monetization_on_outlined),
               const SizedBox(height: 12),
-              _dialogField(ctx, sizeCtrl, 'Cigarettes per Pack',
+              _dialogField(ctx, sizeCtrl, AppStrings.cigsPerPack,
                   Icons.smoking_rooms_outlined),
               const SizedBox(height: 12),
-              _dialogField(ctx, baselineCtrl, 'Daily cigarettes smoked',
+              _dialogField(ctx, baselineCtrl, AppStrings.dailyCigs,
                   Icons.bar_chart_rounded),
             ],
           ),
@@ -381,8 +385,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                   if (mounted) Navigator.pop(ctx);
                 },
-                child: const Text('Save Settings',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(AppStrings.saveSettings,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -436,11 +440,11 @@ class _HomeScreenState extends State<HomeScreen> {
               .eq('id', f['addressee_id'])
               .maybeSingle();
           final friendName =
-              profile != null ? profile['username'] : 'Someone';
+              profile != null ? profile['username'] : AppStrings.someone;
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content:
-                    Text('$friendName accepted your friend request!'),
+                    Text(AppStrings.friendAcceptedRequest(friendName)),
                 backgroundColor: Colors.green,
                 duration: const Duration(seconds: 4)));
           }
@@ -463,124 +467,85 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _showCheckInDialog() {
-    final habit = _userData['habit'] ?? 'your habit';
-    String question = 'Did you slip up with $habit since you were away?';
-    if (habit.toString().toLowerCase().contains('cigarette')) {
-      question = 'Did you smoke any cigarettes since you were away?';
+  // Habit-aware günlük check-in. QUIT (tamamen bırak) modunda sayaç yoktur,
+  // sorulması anlamsız → atlanır. Yalnızca bugün loglanmamış azalt/kademeli/koru
+  // habit'leri varsa tek bir hatırlatma çıkar ve kullanıcıyı Home'a yönlendirir.
+  Future<void> _showCheckInDialog() async {
+    List<UserHabit> habits;
+    try {
+      habits = await HabitRepository().getActiveHabits();
+    } catch (_) {
+      return;
     }
-    int popUpCount = 0;
+    if (!mounted) return;
+    final pending = habits
+        .where((h) => h.programType != ProgramType.quit && !h.loggedToday)
+        .toList();
+    if (pending.isEmpty) return;
+    final locale = context.locale.languageCode;
 
     showDialog(
       context: context,
-      barrierDismissible: false,
       builder: (ctx) {
-        return StatefulBuilder(builder: (ctx, setStateDialog) {
-          return AlertDialog(
-            backgroundColor: ctx.appCard,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: ctx.appBorder, width: 1.5),
-            ),
-            title: Text('Daily Check-In',
-                style: TextStyle(
-                    color: ctx.appText,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 22),
-                textAlign: TextAlign.center),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(question,
-                    style: TextStyle(
-                        color: ctx.appText,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600),
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _counterBtn(
-                      ctx,
-                      Icons.remove_rounded,
-                      () {
-                        if (popUpCount > 0) {
-                          setStateDialog(() => popUpCount--);
-                        }
-                      },
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 28),
-                      child: Text(
-                        '$popUpCount',
-                        style: TextStyle(
-                            fontSize: 52,
-                            fontWeight: FontWeight.w900,
-                            color: ctx.appAccent,
-                            height: 1),
+        return AlertDialog(
+          backgroundColor: ctx.appCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: ctx.appBorder, width: 1.5),
+          ),
+          title: Text(AppStrings.dailyCheckIn,
+              style: TextStyle(
+                  color: ctx.appText,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 20),
+              textAlign: TextAlign.center),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(AppStrings.checkinReminderBody(pending.length),
+                  style: TextStyle(color: ctx.appText, fontSize: 15),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 14),
+              ...pending.take(5).map((h) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(children: [
+                      Text(safeHabitIcon(h.habit?.icon),
+                          style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(h.habit?.title(locale) ?? '',
+                            style: TextStyle(
+                                color: ctx.appText,
+                                fontWeight: FontWeight.w600)),
                       ),
-                    ),
-                    _counterBtn(
-                      ctx,
-                      Icons.add_rounded,
-                      () => setStateDialog(() => popUpCount++),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            actionsAlignment: MainAxisAlignment.center,
-            actions: [
-              if (popUpCount == 0)
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text('No, I stayed strong!',
-                      style: TextStyle(
-                          color: ctx.appAccent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16)),
-                ),
-              if (popUpCount > 0)
-                SizedBox(
-                  width: double.infinity,
-                  height: 46,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: ctx.appAccent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () {
-                      _updateDailyCount(_dailyCount + popUpCount);
-                      Navigator.pop(ctx);
-                    },
-                    child: const Text('Save',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16)),
-                  ),
-                ),
+                    ]),
+                  )),
             ],
-          );
-        });
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child:
+                  Text(AppStrings.cancel, style: TextStyle(color: ctx.appSub)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ctx.appAccent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                if (mounted) setState(() => _selectedIndex = 0);
+              },
+              child: Text(AppStrings.checkinGoLog,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
       },
-    );
-  }
-
-  Widget _counterBtn(
-      BuildContext ctx, IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: ctx.appAccent.withAlpha(25),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: ctx.appBorder),
-        ),
-        child: Icon(icon, color: ctx.appAccent, size: 26),
-      ),
     );
   }
 
@@ -593,11 +558,32 @@ class _HomeScreenState extends State<HomeScreen> {
         habit.toString().toLowerCase().contains('cigarette');
     final currentStreak = _getStreak();
 
-    final screens = [
-      _buildHomeTab(habit),
-      LungsScreen(lungScore: _lungScore),
+    // Sekmeler: Home, Habits (çoklu alışkanlık), Friends.
+    // Akciğer sağlığı artık drawer'dan / habit detayından açılır.
+    final screens = <Widget>[
+      const HomeHabitsPager(),
+      const HabitsScreen(),
       const FriendsScreen(),
     ];
+
+    final navItems = <BottomNavigationBarItem>[
+      BottomNavigationBarItem(
+          icon: const Icon(Icons.home_outlined),
+          activeIcon: const Icon(Icons.home_rounded),
+          label: AppStrings.home),
+      BottomNavigationBarItem(
+          icon: const Icon(Icons.eco_outlined),
+          activeIcon: const Icon(Icons.eco_rounded),
+          label: AppStrings.habitsTab),
+      BottomNavigationBarItem(
+          icon: const Icon(Icons.people_outline_rounded),
+          activeIcon: const Icon(Icons.people_rounded),
+          label: AppStrings.friends),
+    ];
+
+    // Güvenlik: seçili index sekme sayısını aşmasın.
+    final safeIndex =
+        _selectedIndex < screens.length ? _selectedIndex : 0;
 
     return Scaffold(
       backgroundColor: context.appBg,
@@ -605,7 +591,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: context.appBg,
         elevation: 0,
         iconTheme: IconThemeData(color: context.appText, size: 28),
-        title: Text('Better Life',
+        title: Text(AppStrings.appName,
             style: TextStyle(
                 color: context.appText,
                 fontWeight: FontWeight.w900,
@@ -613,7 +599,7 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
       ),
       drawer: _buildDrawer(context, isCigarette, currentStreak),
-      body: screens[_selectedIndex],
+      body: screens[safeIndex],
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: context.appCard,
         selectedItemColor: context.appAccent,
@@ -624,23 +610,10 @@ class _HomeScreenState extends State<HomeScreen> {
             const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         unselectedLabelStyle: const TextStyle(fontSize: 11),
         iconSize: 26,
-        currentIndex: _selectedIndex,
+        currentIndex: safeIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
-              label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border_rounded),
-              activeIcon: Icon(Icons.favorite_rounded),
-              label: 'Lungs'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.people_outline_rounded),
-              activeIcon: Icon(Icons.people_rounded),
-              label: 'Friends'),
-        ],
+        items: navItems,
       ),
     );
   }
@@ -694,7 +667,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  _userData['username']?.toString().toUpperCase() ?? 'USER',
+                  _userData['username']?.toString().toUpperCase() ??
+                      AppStrings.defaultUser,
                   style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -705,7 +679,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     Text(
-                      '$streak DAYS STREAK',
+                      AppStrings.daysStreak(streak),
                       style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 13,
@@ -721,20 +695,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          if (isCigarette)
-            _drawerTile(
-              context,
-              icon: Icons.smoking_rooms_rounded,
-              label: 'Cigarette Info',
-              onTap: () {
-                Navigator.pop(context);
-                _showSettingsDialog();
-              },
-            ),
+          // Sigara/akciğer bilgisi artık ilgili habit'in detay ekranından
+          // açılır (çoklu-habit modeli). Drawer sade tutuldu.
           _drawerTile(
             context,
             icon: Icons.settings_rounded,
-            label: 'Settings',
+            label: AppStrings.settings,
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -747,7 +713,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _drawerTile(
             context,
             icon: Icons.logout_rounded,
-            label: 'Logout',
+            label: AppStrings.logout,
             color: Colors.redAccent,
             onTap: _logout,
           ),
@@ -778,156 +744,263 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Gün bazlı genel milestone'lar (her alışkanlık için ortak).
+  List<List<dynamic>> _homeMilestones(bool tr) => [
+    [1, tr ? '1 GÜN' : '1 DAY'],
+    [7, tr ? '1 HAFTA' : '1 WEEK'],
+    [30, tr ? '1 AY' : '1 MONTH'],
+    [90, tr ? '3 AY' : '3 MONTHS'],
+    [180, tr ? '6 AY' : '6 MONTHS'],
+    [365, tr ? '1 YIL' : '1 YEAR'],
+  ];
+
   Widget _buildHomeTab(String habit) {
-    String label = '$habit\ntoday.';
-    if (habit.toLowerCase().contains('cigarette')) {
-      label = 'Cigarettes smoked\ntoday.';
+    final isCigarette = habit.toLowerCase().contains('cigarette');
+    final tr = context.locale.languageCode == 'tr';
+
+    final now = DateTime.now();
+    var diff = now.difference(_quitDate);
+    if (diff.isNegative) diff = Duration.zero;
+    final cleanDays = diff.inDays;
+    final cleanStr = tr
+        ? '${cleanDays}g ${diff.inHours % 24}s ${diff.inMinutes % 60}dk'
+        : '${cleanDays}d ${diff.inHours % 24}h ${diff.inMinutes % 60}m';
+
+    // Sonraki milestone + ilerleme yüzdesi
+    final ms = _homeMilestones(tr);
+    int prev = 0;
+    int nextDays = ms.last[0] as int;
+    String nextLabel = ms.last[1] as String;
+    for (final m in ms) {
+      if (cleanDays < (m[0] as int)) {
+        nextDays = m[0] as int;
+        nextLabel = m[1] as String;
+        break;
+      }
+      prev = m[0] as int;
     }
+    final frac = nextDays > prev
+        ? ((cleanDays - prev) / (nextDays - prev)).clamp(0.0, 1.0)
+        : 1.0;
+
     final double saved = _totalSaved < 0 ? 0.0 : _totalSaved;
-    final double dailyTarget = _dailyBaseline * (_packPrice / _packSize);
+    final int cigsIfContinued = cleanDays * _dailyBaseline;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       child: Column(
         children: [
-          // --- Counter card ---
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+          _dateHeader(),
+          const SizedBox(height: 12),
+          _milestoneGauge(frac, cleanDays, nextLabel),
+          const SizedBox(height: 20),
+          if (isCigarette) ...[
+            Row(children: [
+              Expanded(
+                  child: _statCard(
+                      Icons.timer_outlined, AppStrings.cleanTime, cleanStr)),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: _statCard(Icons.savings_rounded, AppStrings.savedShort,
+                      '₺${saved.toStringAsFixed(0)}',
+                      valueColor: context.appAccent)),
+            ]),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(
+                  child: _statCard(Icons.favorite_rounded,
+                      AppStrings.lungsShort, '%${_lungScore.toStringAsFixed(0)}',
+                      valueColor: context.appAccent)),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: _statCard(Icons.smoking_rooms_rounded,
+                      AppStrings.ifContinued,
+                      '$cigsIfContinued ${tr ? "sigara" : "cigs"}')),
+            ]),
+            const SizedBox(height: 16),
+            _compactCounter(habit, tr),
+          ] else ...[
+            Row(children: [
+              Expanded(
+                  child: _statCard(
+                      Icons.timer_outlined, AppStrings.cleanTime, cleanStr)),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: _statCard(Icons.local_fire_department_rounded,
+                      AppStrings.streakLabel, '$cleanDays ${tr ? "gün" : "days"}',
+                      valueColor: context.appAccent)),
+            ]),
+            const SizedBox(height: 12),
+            _statCard(Icons.volunteer_activism_rounded,
+                AppStrings.lifeContribution, AppStrings.keepGoing),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _dateHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_todayDayName,
+                style: TextStyle(
+                    color: context.appSub,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 2)),
+            const SizedBox(height: 3),
+            Text(_todayDateStr,
+                style: TextStyle(
+                    color: context.appText,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5)),
+          ],
+        ),
+        Container(
+            width: 8,
+            height: 8,
             decoration: BoxDecoration(
-              color: context.appCard,
-              borderRadius: BorderRadius.circular(20),
+                shape: BoxShape.circle, color: context.appAccent)),
+      ],
+    );
+  }
+
+  Widget _milestoneGauge(double frac, int cleanDays, String nextLabel) {
+    return SizedBox(
+      width: 230,
+      height: 210,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: const Size(210, 210),
+            painter: _GaugePainter(
+              fraction: frac,
+              trackColor: context.appBorder,
+              progressColor: context.appAccent,
             ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('$cleanDays',
+                  style: TextStyle(
+                      fontSize: 54,
+                      height: 1,
+                      fontWeight: FontWeight.w900,
+                      color: context.appAccent)),
+              const SizedBox(height: 2),
+              Text(AppStrings.daysClean,
+                  style: TextStyle(
+                      color: context.appSub,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              Text('${(frac * 100).round()}%',
+                  style: TextStyle(
+                      color: context.appTextDim,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700)),
+            ],
+          ),
+          Positioned(
+            bottom: 6,
             child: Column(
               children: [
-                // Date header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(_todayDayName,
-                            style: TextStyle(
-                                color: context.appSub,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 2)),
-                        const SizedBox(height: 3),
-                        Text(_todayDateStr,
-                            style: TextStyle(
-                                color: context.appText,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5)),
-                      ],
-                    ),
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: context.appAccent,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 36),
-                // Counter
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      '$_dailyCount',
-                      style: TextStyle(
-                        fontSize: 96,
-                        height: 1,
-                        fontWeight: FontWeight.w900,
-                        color: context.appAccent,
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Column(
-                      children: [
-                        _roundBtn(context, Icons.add_rounded,
-                            () => _updateDailyCount(_dailyCount + 1)),
-                        const SizedBox(height: 14),
-                        _roundBtn(context, Icons.remove_rounded,
-                            () => _updateDailyCount(_dailyCount - 1)),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(label,
-                    textAlign: TextAlign.center,
+                Text(AppStrings.nextLabel,
                     style: TextStyle(
                         color: context.appSub,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.5)),
+                Text(nextLabel,
+                    style: TextStyle(
+                        color: context.appText,
                         fontSize: 14,
-                        fontWeight: FontWeight.w500)),
-                if (_dailyBaseline > 0) ...[
-                  const SizedBox(height: 20),
-                  _progressBar(context),
-                ],
+                        fontWeight: FontWeight.w800)),
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          // --- Savings card ---
-          if (habit.toLowerCase().contains('cigarette'))
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: context.appCard,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: context.appAccent.withAlpha(20),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(Icons.savings_rounded,
-                        color: context.appAccent, size: 24),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('TOTAL SAVED',
-                            style: TextStyle(
-                                color: context.appSub,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1.5)),
-                        const SizedBox(height: 4),
-                        Text(
-                          '₺${saved.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            color: context.appAccent,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Daily target: ₺${dailyTarget.toStringAsFixed(2)}',
-                          style: TextStyle(
-                              color: context.appTextDim,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statCard(IconData icon, String label, String value,
+      {Color? valueColor}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.appCard,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(icon, size: 15, color: context.appAccent),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(label.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: context.appSub,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1)),
             ),
+          ]),
+          const SizedBox(height: 8),
+          Text(value,
+              style: TextStyle(
+                  color: valueColor ?? context.appText,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900)),
+        ],
+      ),
+    );
+  }
+
+  Widget _compactCounter(String habit, bool tr) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.appCard,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(AppStrings.dailyCigs.toUpperCase(),
+                    style: TextStyle(
+                        color: context.appSub,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1)),
+                const SizedBox(height: 4),
+                Text('$_dailyCount',
+                    style: TextStyle(
+                        color: context.appAccent,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        height: 1)),
+              ],
+            ),
+          ),
+          _roundBtn(context, Icons.remove_rounded,
+              () => _updateDailyCount(_dailyCount - 1)),
+          const SizedBox(width: 10),
+          _roundBtn(context, Icons.add_rounded,
+              () => _updateDailyCount(_dailyCount + 1)),
         ],
       ),
     );
@@ -960,14 +1033,16 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '$_dailyCount / $_dailyBaseline smoked',
+              AppStrings.smokedOfBaseline(_dailyCount, _dailyBaseline),
               style: TextStyle(
                   color: context.appTextDim,
                   fontSize: 11,
                   fontWeight: FontWeight.w500),
             ),
             Text(
-              remaining > 0 ? '$remaining remaining' : 'Exceeded!',
+              remaining > 0
+                  ? AppStrings.remainingCount(remaining)
+                  : AppStrings.exceeded,
               style: TextStyle(
                   color: remaining > 0 ? context.appAccent : Colors.redAccent,
                   fontSize: 11,
@@ -1029,4 +1104,43 @@ class _AnimatedFlameState extends State<AnimatedFlame>
           color: Colors.orangeAccent, size: 20),
     );
   }
+}
+
+// ─── Dairesel "C" milestone göstergesi (altta açıklık) ───────────────────────
+class _GaugePainter extends CustomPainter {
+  final double fraction;
+  final Color trackColor;
+  final Color progressColor;
+  _GaugePainter({
+    required this.fraction,
+    required this.trackColor,
+    required this.progressColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const stroke = 16.0;
+    final rect = Rect.fromLTWH(
+        stroke / 2, stroke / 2, size.width - stroke, size.height - stroke);
+    const start = 3.1415926 * 0.75; // 135° (sol-alt)
+    const sweep = 3.1415926 * 1.5; // 270° → altta 90° boşluk ("C")
+    final track = Paint()
+      ..color = trackColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round;
+    final prog = Paint()
+      ..color = progressColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(rect, start, sweep, false, track);
+    canvas.drawArc(rect, start, sweep * fraction.clamp(0.0, 1.0), false, prog);
+  }
+
+  @override
+  bool shouldRepaint(_GaugePainter old) =>
+      old.fraction != fraction ||
+      old.progressColor != progressColor ||
+      old.trackColor != trackColor;
 }

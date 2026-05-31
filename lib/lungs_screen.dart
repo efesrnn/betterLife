@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
+import 'app_strings.dart';
 
 class _Milestone {
   final double requiredScore;
@@ -52,7 +53,9 @@ class _LungsScreenState extends State<LungsScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
-                  _showMilestones ? 'Recovery Milestones' : 'Lung Health',
+                  _showMilestones
+                      ? AppStrings.recoveryMilestones
+                      : AppStrings.lungHealth,
                   style: TextStyle(
                     color: context.appText,
                     fontSize: 22,
@@ -190,7 +193,7 @@ class _MainLungsView extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'HEALTH',
+                          AppStrings.health,
                           style: TextStyle(
                             color: context.appSub,
                             fontSize: 10,
@@ -215,7 +218,7 @@ class _MainLungsView extends StatelessWidget {
           _infoCard(
             context,
             icon: Icons.timeline_rounded,
-            title: 'Recovery Progress',
+            title: AppStrings.recoveryProgress,
             body: normalized < 0.3
                 ? 'Every smoke free hour matters. Your body has already begun repairing itself.'
                 : normalized < 0.7

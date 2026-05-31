@@ -1,6 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_theme.dart';
+import 'app_strings.dart';
+
+// Bir profilin "temiz gün" sayısını (quit_date'ten bugüne) hesaplar.
+// Tüm alışkanlıklar için ortak bir rekabet metriğidir.
+int streakDaysOf(Map<String, dynamic> profile) {
+  final q = profile['quit_date'];
+  if (q == null) return 0;
+  final quit = DateTime.tryParse(q.toString());
+  if (quit == null) return 0;
+  final now = DateTime.now();
+  final days = DateTime(now.year, now.month, now.day)
+      .difference(DateTime(quit.year, quit.month, quit.day))
+      .inDays;
+  return days < 0 ? 0 : days;
+}
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -15,14 +30,21 @@ class _FriendsScreenState extends State<FriendsScreen> {
   bool _isSearching = false;
   int _pendingRequestCount = 0;
 
-  List<Map<String, dynamic>> _allFriends = [];
-  List<Map<String, dynamic>> _filteredFriends = [];
+  // Leaderboard: kendisi + arkadaşları, streak'e göre sıralı
+  List<Map<String, dynamic>> _all = [];
+  List<Map<String, dynamic>> _filtered = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchMyFriends();
+    _fetchLeaderboard();
     _fetchPendingCount();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchPendingCount() async {
@@ -33,21 +55,31 @@ class _FriendsScreenState extends State<FriendsScreen> {
         .select('id')
         .eq('addressee_id', myId)
         .eq('status', 'PENDING');
-    if (mounted) {
-      setState(() => _pendingRequestCount = result.length);
-    }
+    if (mounted) setState(() => _pendingRequestCount = result.length);
   }
 
-  Future<void> _fetchMyFriends() async {
+  Future<void> _fetchLeaderboard() async {
     final myId = supabase.auth.currentUser?.id;
     if (myId == null) return;
+
+    // Kabul edilmiş arkadaşlıklar
     final friendships = await supabase
         .from('friendships')
         .select()
         .eq('status', 'ACCEPTED')
         .or('requester_id.eq.$myId,addressee_id.eq.$myId');
 
-    List<Map<String, dynamic>> list = [];
+    final List<Map<String, dynamic>> list = [];
+
+    // Kendi profilini ekle (sıralamada kendini gör)
+    final me = await supabase
+        .from('profiles')
+        .select()
+        .eq('id', myId)
+        .maybeSingle();
+    if (me != null) list.add({...me, '_isMe': true});
+
+    // Arkadaş profillerini ekle
     for (var f in friendships) {
       final friendId =
           (f['requester_id'] == myId) ? f['addressee_id'] : f['requester_id'];
@@ -56,11 +88,18 @@ class _FriendsScreenState extends State<FriendsScreen> {
           .select()
           .eq('id', friendId)
           .maybeSingle();
-      if (profile != null) list.add({...profile, '_friendship_id': f['id']});
+      if (profile != null) {
+        list.add({...profile, '_isMe': false, '_friendship_id': f['id']});
+      }
     }
+
+    // Streak'e (temiz gün) göre azalan sırada sırala
+    list.sort((a, b) => streakDaysOf(b).compareTo(streakDaysOf(a)));
+
+    if (!mounted) return;
     setState(() {
-      _allFriends = list;
-      _filteredFriends = list;
+      _all = list;
+      _filtered = list;
     });
   }
 
@@ -70,33 +109,36 @@ class _FriendsScreenState extends State<FriendsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Remove Friend',
-            style: TextStyle(color: context.appText, fontWeight: FontWeight.w800)),
-        content: Text('Remove $username from your friends?',
+        title: Text(AppStrings.removeFriend,
+            style:
+                TextStyle(color: context.appText, fontWeight: FontWeight.w800)),
+        content: Text(AppStrings.removeFriendConfirm(username),
             style: TextStyle(color: context.appSub)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: context.appSub)),
+            child: Text(AppStrings.cancel,
+                style: TextStyle(color: context.appSub)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove', style: TextStyle(color: Colors.redAccent)),
+            child: Text(AppStrings.remove,
+                style: const TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
     );
     if (confirm != true) return;
     await supabase.from('friendships').delete().eq('id', friendshipId);
-    _fetchMyFriends();
+    _fetchLeaderboard();
   }
 
-  void _filterFriends(String query) {
+  void _filter(String query) {
     setState(() {
-      _filteredFriends = query.isEmpty
-          ? _allFriends
-          : _allFriends
-              .where((f) => f['username']!
+      _filtered = query.isEmpty
+          ? _all
+          : _all
+              .where((f) => (f['username'] ?? '')
                   .toString()
                   .toLowerCase()
                   .contains(query.toLowerCase()))
@@ -120,7 +162,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                     _isSearching = !_isSearching;
                     if (!_isSearching) {
                       _searchController.clear();
-                      _filterFriends('');
+                      _filter('');
                     }
                   });
                 },
@@ -130,18 +172,26 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    onChanged: _filterFriends,
+                    onChanged: _filter,
                     autofocus: true,
+                    cursorColor: context.appAccent,
                     style: TextStyle(
                         color: context.appText, fontWeight: FontWeight.w600),
                     decoration: InputDecoration(
-                      hintText: 'Find friend...',
+                      hintText: AppStrings.findFriend,
                       hintStyle: TextStyle(color: context.appSub),
                       border: InputBorder.none,
                     ),
                   ),
                 )
               else ...[
+                Text(
+                  AppStrings.leaderboard,
+                  style: TextStyle(
+                      color: context.appText,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800),
+                ),
                 const Spacer(),
                 Stack(
                   children: [
@@ -153,7 +203,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                               MaterialPageRoute(
                                   builder: (_) => const FriendRequestsScreen()))
                           .then((_) {
-                        _fetchMyFriends();
+                        _fetchLeaderboard();
                         _fetchPendingCount();
                       }),
                     ),
@@ -164,7 +214,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                         child: Container(
                           width: 16,
                           height: 16,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.redAccent,
                             shape: BoxShape.circle,
                           ),
@@ -191,7 +241,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                           context,
                           MaterialPageRoute(
                               builder: (_) => const AddFriendScreen()))
-                      .then((_) => _fetchMyFriends()),
+                      .then((_) => _fetchLeaderboard()),
                 ),
               ],
             ],
@@ -199,7 +249,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
         ),
         Divider(color: context.appBorder, height: 1),
         Expanded(
-          child: _filteredFriends.isEmpty
+          child: _filtered.isEmpty
               ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -207,13 +257,13 @@ class _FriendsScreenState extends State<FriendsScreen> {
                       Icon(Icons.people_outline_rounded,
                           size: 52, color: context.appSub),
                       const SizedBox(height: 12),
-                      Text('No friends yet',
+                      Text(AppStrings.noFriendsYet,
                           style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               color: context.appSub)),
                       const SizedBox(height: 4),
-                      Text('Add someone to get started',
+                      Text(AppStrings.addSomeoneToStart,
                           style: TextStyle(
                               fontSize: 13, color: context.appTextDim)),
                     ],
@@ -221,16 +271,12 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 )
               : ListView.builder(
                   padding: const EdgeInsets.all(20),
-                  itemCount: _filteredFriends.length,
+                  itemCount: _filtered.length,
                   itemBuilder: (context, i) {
-                    final friend = _filteredFriends[i];
-                    final double totalSaved =
-                        (friend['total_saved'] ?? 0.0).toDouble();
-                    final isCigarette = (friend['habit'] ?? '')
-                        .toString()
-                        .toLowerCase()
-                        .contains('cigarette');
-                    return _friendTile(context, friend, totalSaved, isCigarette);
+                    // Sıra (rank) tüm liste içindeki gerçek konuma göre
+                    final entry = _filtered[i];
+                    final rank = _all.indexOf(entry) + 1;
+                    return _leaderboardTile(context, entry, rank);
                   },
                 ),
         ),
@@ -238,20 +284,35 @@ class _FriendsScreenState extends State<FriendsScreen> {
     );
   }
 
-  Widget _friendTile(BuildContext context, Map<String, dynamic> friend,
-      double totalSaved, bool isCigarette) {
-    final initials =
-        (friend['username'] ?? '?')[0].toString().toUpperCase();
-    final avatarUrl = friend['avatar_url'] as String?;
+  Widget _leaderboardTile(
+      BuildContext context, Map<String, dynamic> entry, int rank) {
+    final bool isMe = entry['_isMe'] == true;
+    final username = (entry['username'] ?? AppStrings.unknown).toString();
+    final initials = username.isNotEmpty ? username[0].toUpperCase() : '?';
+    final avatarUrl = entry['avatar_url'] as String?;
+    final streak = streakDaysOf(entry);
+    final double totalSaved = (entry['total_saved'] ?? 0.0).toDouble();
+    final isCigarette =
+        (entry['habit'] ?? '').toString().toLowerCase().contains('cigarette');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: context.appCard,
         borderRadius: BorderRadius.circular(14),
+        border: isMe
+            ? Border.all(color: context.appAccent, width: 1.5)
+            : null,
       ),
       child: Row(
         children: [
+          // Rank rozeti
+          SizedBox(
+            width: 28,
+            child: _rankBadge(context, rank),
+          ),
+          const SizedBox(width: 8),
           CircleAvatar(
             radius: 22,
             backgroundColor: context.appBorder,
@@ -271,20 +332,28 @@ class _FriendsScreenState extends State<FriendsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(friend['username'] ?? 'Unknown',
-                    style: TextStyle(
-                        color: context.appText,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700)),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(isMe ? AppStrings.you : username,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: isMe ? context.appAccent : context.appText,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 2),
-                Text('Quitting ${friend['habit'] ?? 'a bad habit'}',
+                Text(AppStrings.dayStreakShort(streak),
                     style: TextStyle(color: context.appSub, fontSize: 12)),
                 if (isCigarette) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
-                    'Saved ₺${(totalSaved < 0 ? 0.0 : totalSaved).toStringAsFixed(2)}',
+                    AppStrings.savedAmount(
+                        (totalSaved < 0 ? 0.0 : totalSaved).toStringAsFixed(2)),
                     style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: context.appAccent),
                   ),
@@ -292,20 +361,48 @@ class _FriendsScreenState extends State<FriendsScreen> {
               ],
             ),
           ),
-          GestureDetector(
-            onTap: () => _unfriend(
-                friend['_friendship_id'], friend['username'] ?? 'this user'),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.redAccent.withAlpha(20),
-                borderRadius: BorderRadius.circular(10),
+          // Kendisi değilse arkadaşı çıkarma butonu
+          if (!isMe && entry['_friendship_id'] != null)
+            GestureDetector(
+              onTap: () => _unfriend(entry['_friendship_id'], username),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.person_remove_rounded,
+                    color: Colors.redAccent, size: 20),
               ),
-              child: const Icon(Icons.person_remove_rounded,
-                  color: Colors.redAccent, size: 20),
             ),
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _rankBadge(BuildContext context, int rank) {
+    // İlk üç için renkli, diğerleri için sade numara
+    Color color;
+    switch (rank) {
+      case 1:
+        color = const Color(0xFFFFD700); // altın
+        break;
+      case 2:
+        color = const Color(0xFFC0C0C0); // gümüş
+        break;
+      case 3:
+        color = const Color(0xFFCD7F32); // bronz
+        break;
+      default:
+        color = context.appSub;
+    }
+    return Text(
+      '$rank',
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        color: color,
+        fontSize: rank <= 3 ? 20 : 16,
+        fontWeight: FontWeight.w900,
       ),
     );
   }
@@ -318,7 +415,6 @@ class _FriendsScreenState extends State<FriendsScreen> {
         decoration: BoxDecoration(
           color: context.appCard,
           shape: BoxShape.circle,
-          
         ),
         child: Icon(icon, size: 20, color: context.appText),
       ),
@@ -365,7 +461,9 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
   }
 
   Future<void> _accept(dynamic id) async {
-    await supabase.from('friendships').update({'status': 'ACCEPTED'}).eq('id', id);
+    await supabase
+        .from('friendships')
+        .update({'status': 'ACCEPTED'}).eq('id', id);
     setState(() {});
   }
 
@@ -382,7 +480,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
         backgroundColor: context.appBg,
         elevation: 0,
         iconTheme: IconThemeData(color: context.appText),
-        title: Text('Friend Requests',
+        title: Text(AppStrings.friendRequests,
             style: TextStyle(
                 color: context.appText,
                 fontWeight: FontWeight.w800,
@@ -399,7 +497,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
           final requests = snapshot.data;
           if (requests == null || requests.isEmpty) {
             return Center(
-              child: Text('No pending requests.',
+              child: Text(AppStrings.noPendingRequests,
                   style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
@@ -411,8 +509,8 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
             itemCount: requests.length,
             itemBuilder: (context, i) {
               final req = requests[i];
-              final initials =
-                  (req['username'] ?? '?')[0].toString().toUpperCase();
+              final uname = (req['username'] ?? '?').toString();
+              final initials = uname.isNotEmpty ? uname[0].toUpperCase() : '?';
               final avatarUrl = req['avatar_url'] as String?;
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
@@ -420,7 +518,6 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                 decoration: BoxDecoration(
                   color: context.appCard,
                   borderRadius: BorderRadius.circular(14),
-
                 ),
                 child: Row(
                   children: [
@@ -443,12 +540,14 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(req['username'] ?? 'Unknown',
+                          Text(req['username'] ?? AppStrings.unknown,
                               style: TextStyle(
                                   color: context.appText,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700)),
-                          Text('Quitting ${req['habit'] ?? 'a bad habit'}',
+                          Text(
+                              AppStrings.quittingHabit(
+                                  req['habit'] ?? AppStrings.quittingDefault),
                               style: TextStyle(
                                   color: context.appSub, fontSize: 12)),
                         ],
@@ -514,7 +613,8 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
     for (var user in users) {
       String status = 'NONE';
       for (var f in friendships) {
-        if (f['requester_id'] == user['id'] || f['addressee_id'] == user['id']) {
+        if (f['requester_id'] == user['id'] ||
+            f['addressee_id'] == user['id']) {
           status = f['status'];
           break;
         }
@@ -533,7 +633,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
         backgroundColor: context.appBg,
         elevation: 0,
         iconTheme: IconThemeData(color: context.appText),
-        title: Text('Discover People',
+        title: Text(AppStrings.discoverPeople,
             style: TextStyle(
                 color: context.appText,
                 fontWeight: FontWeight.w800,
@@ -550,7 +650,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
           final users = snapshot.data;
           if (users == null || users.isEmpty) {
             return Center(
-              child: Text('No other users found yet.',
+              child: Text(AppStrings.noOtherUsers,
                   style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
@@ -596,7 +696,8 @@ class _DiscoverUserTileState extends State<DiscoverUserTile> {
           {'requester_id': myId, 'addressee_id': widget.user['id']});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Request sent to ${widget.user['username']}!"),
+          content: Text(AppStrings.requestSentTo(
+              (widget.user['username'] ?? AppStrings.unknown).toString())),
           backgroundColor: context.appAccent,
         ));
       }
@@ -607,8 +708,8 @@ class _DiscoverUserTileState extends State<DiscoverUserTile> {
 
   @override
   Widget build(BuildContext context) {
-    final initials =
-        (widget.user['username'] ?? '?')[0].toString().toUpperCase();
+    final uname = (widget.user['username'] ?? '?').toString();
+    final initials = uname.isNotEmpty ? uname[0].toUpperCase() : '?';
     final avatarUrl = widget.user['avatar_url'] as String?;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -616,7 +717,6 @@ class _DiscoverUserTileState extends State<DiscoverUserTile> {
       decoration: BoxDecoration(
         color: context.appCard,
         borderRadius: BorderRadius.circular(14),
-
       ),
       child: Row(
         children: [
@@ -639,12 +739,14 @@ class _DiscoverUserTileState extends State<DiscoverUserTile> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.user['username'] ?? 'Unknown',
+                Text(widget.user['username'] ?? AppStrings.unknown,
                     style: TextStyle(
                         color: context.appText,
                         fontSize: 15,
                         fontWeight: FontWeight.w700)),
-                Text('Quitting ${widget.user['habit'] ?? 'a bad habit'}',
+                Text(
+                    AppStrings.quittingHabit(
+                        widget.user['habit'] ?? AppStrings.quittingDefault),
                     style: TextStyle(color: context.appSub, fontSize: 12)),
               ],
             ),

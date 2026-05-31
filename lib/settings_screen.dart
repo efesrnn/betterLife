@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_theme.dart';
+import 'app_strings.dart';
 import 'theme_service.dart';
+import 'services/habit_repository.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -18,6 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _email = '';
   String _currentUsername = '';
   bool _isLoading = false;
+  bool _merging = false;
 
   @override
   void initState() {
@@ -37,9 +41,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _updateUsername() async {
-    final newUsername = _usernameController.text.trim();
+    var newUsername = _usernameController.text
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+    if (newUsername.length > 24) newUsername = newUsername.substring(0, 24);
     if (newUsername.length < 3) {
-      _snack('Username must be at least 3 characters.', isError: true);
+      _snack(AppStrings.usernameMin3, isError: true);
       return;
     }
     if (newUsername.toLowerCase() == _currentUsername.toLowerCase()) return;
@@ -52,7 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           .eq('username', newUsername)
           .maybeSingle();
       if (existing != null) {
-        _snack('This username is already taken!', isError: true);
+        _snack(AppStrings.usernameTaken, isError: true);
         setState(() => _isLoading = false);
         return;
       }
@@ -61,10 +69,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         await supabase.from('profiles').update({'username': newUsername}).eq('id', user.id);
         await supabase.auth.updateUser(UserAttributes(data: {'username': newUsername}));
         setState(() => _currentUsername = newUsername);
-        _snack('Username updated!');
+        _snack(AppStrings.usernameUpdated);
       }
     } catch (e) {
-      _snack('Error: $e', isError: true);
+      _snack(AppStrings.errorWith(e), isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -73,18 +81,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _updatePassword() async {
     final newPassword = _passwordController.text.trim();
     if (newPassword.length < 6) {
-      _snack('Password must be at least 6 characters.', isError: true);
+      _snack(AppStrings.passwordMin6, isError: true);
       return;
     }
     setState(() => _isLoading = true);
     try {
       await supabase.auth.updateUser(UserAttributes(password: newPassword));
       _passwordController.clear();
-      _snack('Password updated!');
+      _snack(AppStrings.passwordUpdated);
     } catch (e) {
-      _snack('Error: $e', isError: true);
+      _snack(AppStrings.errorWith(e), isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // Admin: benzer alışkanlıkları tek çatı altında toplayan 24s işini elle
+  // tetikler (duplicate-habits edge function). Sonuç snackbar'da gösterilir.
+  Future<void> _runMerge() async {
+    setState(() => _merging = true);
+    try {
+      final res = await HabitRepository().runHabitDeduplication();
+      final merged = (res['merged'] as num?)?.toInt() ?? 0;
+      final promoted = (res['promoted'] as num?)?.toInt() ?? 0;
+      _snack(AppStrings.adminMergeDone(merged, promoted));
+    } catch (e) {
+      _snack(AppStrings.adminMergeFailed(e), isError: true);
+    } finally {
+      if (mounted) setState(() => _merging = false);
     }
   }
 
@@ -104,7 +128,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: context.appBg,
         elevation: 0,
         iconTheme: IconThemeData(color: context.appText),
-        title: Text('Settings',
+        title: Text(AppStrings.settings,
             style: TextStyle(
                 color: context.appText,
                 fontWeight: FontWeight.w800,
@@ -116,12 +140,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionLabel('APPEARANCE'),
+            _sectionLabel(AppStrings.appearance),
             const SizedBox(height: 12),
             _themeToggleTile(),
             const SizedBox(height: 32),
 
-            _sectionLabel('ACCOUNT INFO'),
+            _sectionLabel(AppStrings.languageLabel),
+            const SizedBox(height: 12),
+            _languageTile(),
+            const SizedBox(height: 32),
+
+            _sectionLabel(AppStrings.accountInfo),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -147,7 +176,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Email Address',
+                        Text(AppStrings.emailAddress,
                             style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -166,20 +195,101 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 32),
 
-            _sectionLabel('CHANGE USERNAME'),
+            _sectionLabel(AppStrings.changeUsername),
             const SizedBox(height: 12),
-            _field(_usernameController, 'New Username', Icons.person_outline_rounded),
+            _field(_usernameController, AppStrings.newUsername,
+                Icons.person_outline_rounded),
             const SizedBox(height: 12),
-            _actionButton('Save Username', _isLoading ? null : _updateUsername),
+            _actionButton(
+                AppStrings.saveUsername, _isLoading ? null : _updateUsername),
             const SizedBox(height: 32),
 
-            _sectionLabel('CHANGE PASSWORD'),
+            _sectionLabel(AppStrings.changePassword),
             const SizedBox(height: 12),
-            _field(_passwordController, 'New Password', Icons.lock_outline_rounded, obscure: true),
+            _field(_passwordController, AppStrings.newPassword,
+                Icons.lock_outline_rounded,
+                obscure: true),
             const SizedBox(height: 12),
-            _actionButton('Save New Password', _isLoading ? null : _updatePassword),
+            _actionButton(AppStrings.saveNewPassword,
+                _isLoading ? null : _updatePassword),
+            const SizedBox(height: 32),
+
+            _sectionLabel(AppStrings.adminTitle),
+            const SizedBox(height: 12),
+            _adminMergeTile(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _adminMergeTile() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.appCard,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(
+                color: context.appAccent.withAlpha(20),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.merge_type_rounded,
+                  color: context.appAccent, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(AppStrings.adminMergeNow,
+                  style: TextStyle(
+                      color: context.appText,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700)),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          Text(AppStrings.adminMergeDesc,
+              style:
+                  TextStyle(color: context.appSub, fontSize: 12, height: 1.4)),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.appAccent,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: _merging ? null : _runMerge,
+              child: _merging
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white)),
+                        const SizedBox(width: 10),
+                        Text(AppStrings.adminMergeRunning,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    )
+                  : Text(AppStrings.adminMergeNow,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -215,13 +325,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Theme',
+                    Text(AppStrings.theme,
                         style: TextStyle(
                             color: context.appText,
                             fontSize: 15,
                             fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
-                    Text(isDark ? 'Dark mode' : 'Light mode',
+                    Text(isDark ? AppStrings.darkMode : AppStrings.lightMode,
                         style: TextStyle(color: context.appSub, fontSize: 12)),
                   ],
                 ),
@@ -238,6 +348,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _languageTile() {
+    final isTr = context.locale.languageCode == 'tr';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: context.appCard,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: context.appAccent.withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.language_rounded,
+                color: context.appAccent, size: 18),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(AppStrings.language,
+                style: TextStyle(
+                    color: context.appText,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700)),
+          ),
+          _langPill(AppStrings.turkish, isTr,
+              () => context.setLocale(const Locale('tr'))),
+          const SizedBox(width: 8),
+          _langPill(AppStrings.english, !isTr,
+              () => context.setLocale(const Locale('en'))),
+        ],
+      ),
+    );
+  }
+
+  Widget _langPill(String label, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? context.appAccent : context.appBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: selected ? context.appAccent : context.appBorder),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : context.appSub,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
+        ),
+      ),
     );
   }
 

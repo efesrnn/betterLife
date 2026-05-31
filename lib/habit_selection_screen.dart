@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'app_theme.dart';
+import 'app_strings.dart';
 import 'goal_selection_screen.dart';
 
 class HabitSelectionScreen extends StatefulWidget {
@@ -9,15 +11,16 @@ class HabitSelectionScreen extends StatefulWidget {
 }
 
 class _HabitSelectionScreenState extends State<HabitSelectionScreen> {
-  // Alışkanlık listemiz
-  final List<Map<String, dynamic>> _habits = [
-    {'name': 'Cigarettes', 'icon': '🚬', 'selected': true},
-    {'name': 'Vapes', 'icon': '💨', 'selected': false},
-    {'name': 'Alcohol', 'icon': '🍾', 'selected': false},
-    {'name': 'Junk Food', 'icon': '🍔', 'selected': false},
-    {'name': 'Screen Time', 'icon': '📱💻', 'selected': false},
+  // Önceden tanımlı alışkanlıklar (tek seçim)
+  final List<Map<String, String>> _habits = const [
+    {'name': 'Cigarettes', 'icon': '🚬'},
+    {'name': 'Vapes', 'icon': '💨'},
+    {'name': 'Alcohol', 'icon': '🍾'},
+    {'name': 'Junk Food', 'icon': '🍔'},
+    {'name': 'Screen Time', 'icon': '📱'},
   ];
 
+  int _selectedIndex = -1; // -1 = hiçbiri
   bool _isOtherSelected = false;
   final TextEditingController _otherController = TextEditingController();
 
@@ -27,29 +30,28 @@ class _HabitSelectionScreenState extends State<HabitSelectionScreen> {
     super.dispose();
   }
 
-  // YENİ: En az bir tane alışkanlık seçili mi diye kontrol eden fonksiyon
-  bool get _isAnyHabitSelected {
-    // Listede seçili olan var mı bakıyoruz
-    bool isListSelected = _habits.any((habit) => habit['selected'] == true);
-    // Ya listeden biri seçili olacak YA DA "Other" seçili olacak
-    return isListSelected || _isOtherSelected;
+  bool get _isAnyHabitSelected => _selectedIndex != -1 || _isOtherSelected;
+
+  void _selectHabit(int index) {
+    setState(() {
+      _selectedIndex = index;
+      _isOtherSelected = false;
+      _otherController.clear();
+    });
   }
 
   void _goToNextPage() {
-    // Seçilen alışkanlığı tespit edelim
-    String selectedHabitName = '';
-    if (_isOtherSelected) {
-      selectedHabitName = _otherController.text.trim();
-    } else {
-      final selected = _habits.firstWhere((h) => h['selected'] == true, orElse: () => {});
-      selectedHabitName = selected['name'] ?? '';
-    }
+    final String selectedHabitName = _isOtherSelected
+        ? _otherController.text.trim()
+        : _habits[_selectedIndex]['name']!;
+
+    if (selectedHabitName.isEmpty) return;
 
     Navigator.push(
       context,
       MaterialPageRoute(
-        // Seçimi Goal ekranına yolluyoruz
-        builder: (context) => GoalSelectionScreen(selectedHabit: selectedHabitName),
+        builder: (context) =>
+            GoalSelectionScreen(selectedHabit: selectedHabitName),
       ),
     );
   }
@@ -57,58 +59,57 @@ class _HabitSelectionScreenState extends State<HabitSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.appBg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 1. En üstteki Oval "Better Life" Logosu
+              // Oval "Better Life" logosu
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black87, width: 3),
-                  borderRadius: const BorderRadius.all(Radius.elliptical(150, 70)),
+                  border: Border.all(color: context.appAccent, width: 2),
+                  borderRadius:
+                      const BorderRadius.all(Radius.elliptical(160, 70)),
                 ),
-                child: const Text(
-                  'Better Life',
+                child: Text(
+                  AppStrings.appName,
                   style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1,
+                    color: context.appAccent,
                   ),
                 ),
               ),
-              const SizedBox(height: 50),
+              const SizedBox(height: 48),
 
-              // 2. Başlık Metni
-              const Text(
-                'CHOOSE A HABIT TO\nOVERCOME WITH',
+              Text(
+                AppStrings.chooseHabit,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 22,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.2,
+                  color: context.appText,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 32),
 
-              // 3. Alışkanlık Seçenekleri (Liste)
-              ..._habits.map((habit) => _buildHabitRow(habit)),
-
-              // 4. "Other..." Seçeneği ve Metin Kutusu
+              ...List.generate(_habits.length, (i) => _buildHabitRow(i)),
               _buildOtherRow(),
 
-              const SizedBox(height: 50), // Buton ile liste arasına boşluk
+              const SizedBox(height: 40),
 
-              // YENİ: 5. İleri Ok Butonu
               IconButton(
-                iconSize: 60, // Oku büyük ve belirgin yapıyoruz
-                icon: const Icon(Icons.arrow_circle_right_outlined),
-                // Eğer en az biri seçiliyse kırmızı, hiçbiri seçili değilse gri olacak:
-                color: _isAnyHabitSelected ? Colors.red : Colors.grey.shade400,
-                // Eğer hiçbiri seçili değilse onPressed'i null yapıyoruz (tıklanamaz oluyor):
+                iconSize: 60,
+                icon: const Icon(Icons.arrow_circle_right_rounded),
+                color: _isAnyHabitSelected
+                    ? context.appAccent
+                    : context.appBorder,
                 onPressed: _isAnyHabitSelected ? _goToNextPage : null,
               ),
             ],
@@ -118,111 +119,104 @@ class _HabitSelectionScreenState extends State<HabitSelectionScreen> {
     );
   }
 
-  Widget _buildHabitRow(Map<String, dynamic> habit) {
+  Widget _buildHabitRow(int index) {
+    final habit = _habits[index];
+    final bool isSelected = _selectedIndex == index;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: Row(
-        children: [
-          Transform.scale(
-            scale: 1.3,
-            child: Checkbox(
-              value: habit['selected'],
-              activeColor: Colors.red,
-              side: const BorderSide(color: Colors.black87, width: 2),
-              onChanged: (bool? value) {
-                setState(() {
-                  habit['selected'] = value ?? false;
-                });
-              },
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
+      child: GestureDetector(
+        onTap: () => _selectHabit(index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: context.appCard,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? context.appAccent : context.appBorder,
+              width: isSelected ? 2 : 1,
             ),
           ),
-          Text(
-            habit['name'],
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          child: Row(
+            children: [
+              Icon(
+                isSelected
+                    ? Icons.check_circle_rounded
+                    : Icons.circle_outlined,
+                color: isSelected ? context.appAccent : context.appSub,
+                size: 24,
+              ),
+              const SizedBox(width: 14),
+              Text(
+                habit['name']!,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: context.appText,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(habit['icon']!, style: const TextStyle(fontSize: 22)),
+            ],
           ),
-          const SizedBox(width: 12),
-          Text(
-            habit['icon'],
-            style: const TextStyle(fontSize: 24),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildOtherRow() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: Row(
-        children: [
-          Transform.scale(
-            scale: 1.3,
-            child: Checkbox(
-              value: _isOtherSelected,
-              activeColor: Colors.red,
-              side: const BorderSide(color: Colors.black87, width: 2),
-              onChanged: (bool? value) {
-                setState(() {
-                  if (value == true) {
-                    if (_otherController.text.trim().isNotEmpty) {
-                      _isOtherSelected = true;
-                    }
-                  } else {
-                    _isOtherSelected = false;
-                    _otherController.clear();
-                  }
-                });
-              },
-            ),
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          color: context.appCard,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _isOtherSelected ? context.appAccent : context.appBorder,
+            width: _isOtherSelected ? 2 : 1,
           ),
-          Expanded(
-            child: Container(
-              height: 45,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.black87, width: 2),
-              ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              _isOtherSelected
+                  ? Icons.check_circle_rounded
+                  : Icons.circle_outlined,
+              color: _isOtherSelected ? context.appAccent : context.appSub,
+              size: 24,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
               child: TextField(
                 controller: _otherController,
-                enabled: true,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: context.appText,
+                ),
+                cursorColor: context.appAccent,
                 onChanged: (text) {
                   setState(() {
-                    _isOtherSelected = text.trim().isNotEmpty;
+                    if (text.trim().isNotEmpty) {
+                      _isOtherSelected = true;
+                      _selectedIndex = -1;
+                    } else {
+                      _isOtherSelected = false;
+                    }
                   });
                 },
-                decoration: const InputDecoration(
-                  hintText: 'Other... (Type in)',
-                  hintStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: InputDecoration(
+                  hintText: AppStrings.otherHabitHint,
+                  hintStyle: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: context.appSub,
+                  ),
                   border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// YENİ: Geçici (Dummy) Sonraki Sayfa
-// İleride kendi gerçek sayfanı yapana kadar ok tuşuna basınca burası açılacak.
-class DummyNextScreen extends StatelessWidget {
-  const DummyNextScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Next Step', style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.black),
-        elevation: 0,
-      ),
-      body: const Center(
-        child: Text(
-          'Harika! Bir sonraki sayfaya geçtin.',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ],
         ),
       ),
     );

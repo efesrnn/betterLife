@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'app_theme.dart';
 import 'auth_screen.dart';
 import 'habit_selection_screen.dart';
 import 'home_screen.dart';
-// EmailVerificationScreen auth_screen.dart içinde tanımlı
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -29,24 +29,15 @@ class _AuthGateState extends State<AuthGate> {
     if (!mounted) return;
 
     if (session != null) {
-      final user = session.user;
-      final emailConfirmed = user.emailConfirmedAt != null;
-
-      if (!emailConfirmed) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => EmailVerificationScreen(email: user.email ?? ''),
-          ),
-        );
-        return;
-      }
-
-      final isSetupComplete = user.userMetadata?['is_setup_complete'] ?? false;
+      // E-posta doğrulaması kaldırıldı: oturum varsa doğrudan devam.
+      final isSetupComplete =
+          session.user.userMetadata?['is_setup_complete'] ?? false;
       if (isSetupComplete) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()));
       } else {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HabitSelectionScreen()));
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => const HabitSelectionScreen()));
       }
     } else {
       // Hiç giriş yapmamış -> Login Ekranına
@@ -56,11 +47,11 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    // Kontrol yapılırken ekranda görünecek siyah yükleniyor ikonu
-    return const Scaffold(
-      backgroundColor: Colors.white,
+    // Oturum kontrol edilirken gösterilen, temaya uyumlu yükleme ekranı
+    return Scaffold(
+      backgroundColor: context.appBg,
       body: Center(
-        child: CircularProgressIndicator(color: Colors.black),
+        child: CircularProgressIndicator(color: context.appAccent),
       ),
     );
   }
