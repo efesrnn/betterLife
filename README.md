@@ -42,7 +42,7 @@ A habit tracking app built with Flutter that helps you quit, reduce or build hab
 
 | Settings | | |
 | --- | --- | --- |
-| ![Settings](docs/screenshots/settings.png) | | |
+| ![Settings](docs/screenshots/settings.png) |![Settings]() |![Settings]() |
 
 ## Getting started
 
