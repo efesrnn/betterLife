@@ -5,7 +5,7 @@ import 'app_strings.dart';
 import 'habit_detail_screen.dart';
 import 'services/habit_repository.dart';
 
-// ─── Habits sekmesi (Home içinde body olarak kullanılır) ──────────────────────
+// --- Habits sekmesi (Home içinde body olarak kullanılır) ----------------------
 class HabitsScreen extends StatefulWidget {
   const HabitsScreen({super.key});
 
@@ -83,6 +83,14 @@ class _HabitsScreenState extends State<HabitsScreen> {
     if (ok != true) return;
     try {
       await _repo.toggleHabitPause(uh.id);
+      // Silme islemi profil akisinda da gorunsun
+      await _repo.logHabitEvent(
+        userHabitId: uh.id,
+        eventType: 'REMOVED',
+        titleTr: uh.habit?.titleTr,
+        titleEn: uh.habit?.titleEn,
+        icon: uh.habit?.icon,
+      );
     } catch (_) {}
     _load();
   }
@@ -212,7 +220,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
                   color: Colors.redAccent.withAlpha(20),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.pause_rounded,
+                child: const Icon(Icons.delete_outline_rounded,
                     color: Colors.redAccent, size: 20),
               ),
             ),
@@ -235,7 +243,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
   }
 }
 
-// ─── Yeni alışkanlık ekleme (Gemini değerlendirmesi) ──────────────────────────
+// --- Yeni alışkanlık ekleme (Gemini değerlendirmesi) --------------------------
 class AddHabitScreen extends StatefulWidget {
   const AddHabitScreen({super.key});
 
@@ -252,7 +260,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
   final _durationCtrl = TextEditingController(text: '4');
   bool _durMonths = false; // false = hafta, true = ay
 
-  // Katalog (anlık metin araması) — seed + topluluk habit'leri.
+  // Katalog (anlık metin araması) - seed + topluluk habit'leri.
   List<Habit> _catalog = [];
   bool _catalogLoading = true;
 
@@ -264,7 +272,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
   String? _selectedId;
   String _selectedTitle = '';
   String _selectedUnit = '';
-  bool _selectedPositive = false; // POSITIVE_BUILD / INCREASE → artır/koru
+  bool _selectedPositive = false; // POSITIVE_BUILD / INCREASE -> artır/koru
   ProgramType _program = ProgramType.quit;
   int _step = 0; // 0 = ara/seç, 1 = planla
   bool _busy = false;
@@ -336,7 +344,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     });
   }
 
-  // forceNew=true → benzerlik olsa da yeni habit oluştur.
+  // forceNew=true -> benzerlik olsa da yeni habit oluştur.
   Future<void> _evaluate({bool forceNew = false}) async {
     final locale = context.locale.languageCode;
     final text = _searchCtrl.text.trim();
@@ -353,7 +361,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
         _ai = res;
         _aiLoading = false;
       });
-      // EXACT veya NEW → doğrudan plan adımına geç.
+      // EXACT veya NEW -> doğrudan plan adımına geç.
       if (res.isExactMatch || res.isNewHabit) {
         final id = res.habitId ?? '';
         final m = res.habit?['habit_metadata'] as Map<String, dynamic>?;
@@ -469,7 +477,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     );
   }
 
-  // ── Adım 0: katalogdan ara/seç veya AI ile yeni ekle ──
+  // -- Adım 0: katalogdan ara/seç veya AI ile yeni ekle --
   Widget _searchStep(BuildContext context, String locale) {
     final q = _searchCtrl.text.trim();
     final filtered = _filteredCatalog(locale);
@@ -618,7 +626,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
           title: AppStrings.habitInvalid,
           body: r.getRejectionReason(locale) ?? '');
     }
-    // MAYBE → tekilleştirilmiş öneriler + "yine de yeni oluştur" (engellemez)
+    // MAYBE -> tekilleştirilmiş öneriler + "yine de yeni oluştur" (engellemez)
     if (r.isMaybeMatch && r.suggestions != null) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _infoCard(context,
@@ -671,11 +679,11 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
         ),
       ]);
     }
-    // EXACT/NEW → _evaluate zaten plan adımına geçirdi.
+    // EXACT/NEW -> _evaluate zaten plan adımına geçirdi.
     return const SizedBox.shrink();
   }
 
-  // ── Adım 1: program + plan ──
+  // -- Adım 1: program + plan --
   Widget _planStep(BuildContext context, String locale) {
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -963,7 +971,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
   }
 }
 
-// ─── Katalog (varsayılan + topluluk alışkanlıkları) ───────────────────────────
+// --- Katalog (varsayılan + topluluk alışkanlıkları) ---------------------------
 class HabitCatalogScreen extends StatefulWidget {
   const HabitCatalogScreen({super.key});
 

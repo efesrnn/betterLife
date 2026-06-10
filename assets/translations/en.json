@@ -63,9 +63,13 @@
     "keep_going": "Stronger every day",
     "days_clean": "days clean",
     "relapse_btn": "I slipped today",
+    "relapse_confirm_title": "Are you sure?",
+    "relapse_confirm_body": "Your clean streak and progress will be reset. This cannot be undone.",
+    "relapse_confirm_btn": "Reset",
     "today_target": "Today's target",
     "log_today": "Log today",
     "logged_today": "Logged today",
+    "update_log": "Update",
     "calendar_title": "This month",
     "days_on_target": "Days on target",
     "plan_progress": "Plan progress",
@@ -111,7 +115,9 @@
     "language": "Language",
     "language_label": "LANGUAGE",
     "turkish": "Türkçe",
-    "english": "English"
+    "english": "English",
+    "developer": "Developer settings",
+    "developer_desc": "Maintenance and catalog tools"
   },
   "nav": {
     "home": "Home"
@@ -195,8 +201,8 @@
     "catalog_title": "Habit Catalog",
     "no_catalog": "No habits in the catalog yet",
     "lung_health": "Lung Health",
-    "remove": "Remove habit",
-    "remove_confirm": "Stop tracking {habit}?",
+    "remove": "Delete habit",
+    "remove_confirm": "Delete {habit}? Your streak and progress will be lost.",
     "paused": "Paused",
     "similarity": "match"
   },
@@ -288,7 +294,9 @@
     "started": "Started tracking {habit}",
     "logged": "{habit}: {value} {unit}",
     "logged_clean": "{habit}: stayed clean",
-    "milestone": "{habit}: {n}-day milestone 🎉"
+    "milestone": "{habit}: {n}-day milestone 🎉",
+    "relapse": "{habit}: reset the counter",
+    "removed": "Stopped tracking {habit}"
   },
   "score": {
     "points": "pts",

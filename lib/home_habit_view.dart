@@ -5,7 +5,7 @@ import 'app_theme.dart';
 import 'app_strings.dart';
 import 'services/habit_repository.dart';
 
-// ─── Home: aktif habit'ler arasında kaydırmalı sayfalar ──────────────────────
+// --- Home: aktif habit'ler arasında kaydırmalı sayfalar ----------------------
 class HomeHabitsPager extends StatefulWidget {
   const HomeHabitsPager({super.key});
   @override
@@ -32,7 +32,7 @@ class _HomeHabitsPagerState extends State<HomeHabitsPager> {
   }
 
   Future<void> _load({bool silent = false}) async {
-    // silent: log/relapse sonrası sessiz yenileme — tam ekran spinner gösterip
+    // silent: log/relapse sonrası sessiz yenileme - tam ekran spinner gösterip
     // sayfa state'lerini yok etmez (sayaç sıfırlanmaz, takvim yerinde güncellenir).
     if (!silent) setState(() => _loading = true);
     try {
@@ -113,7 +113,7 @@ class _HomeHabitsPagerState extends State<HomeHabitsPager> {
   }
 }
 
-// ─── Tek habit sayfası (program tipine duyarlı) ──────────────────────────────
+// --- Tek habit sayfası (program tipine duyarlı) ------------------------------
 class HabitHomeView extends StatefulWidget {
   final UserHabit userHabit;
   final VoidCallback onChanged;
@@ -124,7 +124,8 @@ class HabitHomeView extends StatefulWidget {
   State<HabitHomeView> createState() => _HabitHomeViewState();
 }
 
-class _HabitHomeViewState extends State<HabitHomeView> {
+class _HabitHomeViewState extends State<HabitHomeView>
+    with AutomaticKeepAliveClientMixin {
   final _repo = HabitRepository();
   List<DailyLog> _logs = [];
   bool _busy = false;
@@ -133,21 +134,48 @@ class _HabitHomeViewState extends State<HabitHomeView> {
   UserHabit get uh => widget.userHabit;
   bool get _isQuit => uh.programType == ProgramType.quit;
 
+  // Sayfalar arasinda gecis yapilinca state korunur, sayac sifirlanmaz.
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   void initState() {
     super.initState();
     _loadLogs();
   }
 
+  @override
+  void didUpdateWidget(covariant HabitHomeView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Ust liste sessizce yenilendiginde (ornegin log sonrasi) ayni state
+    // farkli bir habit verisiyle yeniden kullanilabilir, loglari tazele.
+    if (oldWidget.userHabit.id != uh.id ||
+        oldWidget.userHabit.lastLogDate != uh.lastLogDate) {
+      _loadLogs();
+    }
+  }
+
   Future<void> _loadLogs() async {
     try {
       final logs = await _repo.getHabitHistory(uh.id, limit: 60);
       if (!mounted) return;
-      setState(() => _logs = logs);
+      setState(() {
+        _logs = logs;
+        // Bugun zaten log atildiysa sayac 0 yerine girilen degeri gostersin.
+        final today = DateTime.now().toIso8601String().substring(0, 10);
+        for (final l in logs) {
+          if (l.logDate.startsWith(today)) {
+            _todayValue = l.reportedValue;
+            break;
+          }
+        }
+      });
     } catch (_) {}
   }
 
-  // Kademeli plan: gün bazlı hedef.
+  // Kademeli plan: gün bazlı hedef. Birimler (öğün, sigara vb.) tam sayı
+  // olduğu için eğriden çıkan ara değer en yakın tam sayıya yuvarlanır,
+  // başlangıç ile nihai hedef arasında kalacak şekilde sınırlanır.
   double _targetForDay(int dayIndex) {
     final start = uh.startValue ?? 0;
     final target = uh.targetValue ?? 0;
@@ -156,16 +184,57 @@ class _HabitHomeViewState extends State<HabitHomeView> {
       final total = uh.targetDate != null
           ? uh.targetDate!.difference(uh.sinceDate).inDays
           : 0;
-      return gradualTargetForDay(
+      final raw = gradualTargetForDay(
           start: start, target: target, totalDays: total, dayIndex: dayIndex);
+      return raw
+          .roundToDouble()
+          .clamp(math.min(start, target), math.max(start, target))
+          .toDouble();
     }
     return uh.currentDailyTarget ?? target;
   }
 
+  // Tam sayıysa ondalıksız, değilse tek ondalıkla gösterir (5.0 yerine 5).
+  String _fmtNum(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+
   Future<void> _relapse() async {
+    // Sifirlamadan once kullaniciyi uyar, onay almadan islem yapma
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.appCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(AppStrings.relapseConfirmTitle,
+            style:
+                TextStyle(color: ctx.appText, fontWeight: FontWeight.w800)),
+        content: Text(AppStrings.relapseConfirmBody,
+            style: TextStyle(color: ctx.appSub)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(AppStrings.cancel,
+                  style: TextStyle(color: ctx.appSub))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(AppStrings.relapseConfirmBtn,
+                  style: const TextStyle(color: Colors.redAccent))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
     setState(() => _busy = true);
     try {
       await _repo.resetHabitStart(uh.id);
+      // Profil akisinda gorunsun
+      await _repo.logHabitEvent(
+        userHabitId: uh.id,
+        eventType: 'RELAPSE',
+        titleTr: uh.habit?.titleTr,
+        titleEn: uh.habit?.titleEn,
+        icon: uh.habit?.icon,
+      );
     } catch (_) {}
     if (!mounted) return;
     setState(() => _busy = false);
@@ -202,6 +271,7 @@ class _HabitHomeViewState extends State<HabitHomeView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // AutomaticKeepAliveClientMixin icin gerekli
     final tr = context.locale.languageCode == 'tr';
     final locale = context.locale.languageCode;
     final now = DateTime.now();
@@ -261,7 +331,7 @@ class _HabitHomeViewState extends State<HabitHomeView> {
     );
   }
 
-  // ── QUIT görünümü (sayaç yok) ─────────────────────────────
+  // -- QUIT görünümü (sayaç yok) -----------------------------
   Widget _quitView(
       BuildContext context, bool tr, int cleanDays, Duration diff) {
     final ms = _milestones(tr);
@@ -337,7 +407,7 @@ class _HabitHomeViewState extends State<HabitHomeView> {
     );
   }
 
-  // ── REDUCE / GRADUAL görünümü (sayaç + takvim) ────────────
+  // -- REDUCE / GRADUAL görünümü (sayaç + takvim) ------------
   Widget _reduceView(BuildContext context, bool tr, int dayIndex) {
     final target = _targetForDay(dayIndex);
     final locale = tr ? 'tr' : 'en';
@@ -366,7 +436,7 @@ class _HabitHomeViewState extends State<HabitHomeView> {
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.5)),
               const SizedBox(height: 6),
-              Text('${target.toStringAsFixed(target < 10 ? 1 : 0)} $unit',
+              Text('${_fmtNum(target)} $unit',
                   style: TextStyle(
                       color: context.appAccent,
                       fontSize: 30,
@@ -432,15 +502,15 @@ class _HabitHomeViewState extends State<HabitHomeView> {
                 height: 44,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        logged ? context.appBorder : context.appAccent,
+                    backgroundColor: context.appAccent,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: (_busy || logged) ? null : _logToday,
-                  child: Text(AppStrings.save,
+                  // Bugün loglanmışsa da buton aktif kalır, değer güncellenebilir
+                  onPressed: _busy ? null : _logToday,
+                  child: Text(logged ? AppStrings.updateLogLabel : AppStrings.save,
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
@@ -466,7 +536,7 @@ class _HabitHomeViewState extends State<HabitHomeView> {
     );
   }
 
-  // ── Tasarruf + hedefe uyum + ilerleme barı ────────────────
+  // -- Tasarruf + hedefe uyum + ilerleme barı ----------------
   Widget _reduceStats(BuildContext context, bool tr) {
     final start = uh.startValue ?? 0;
     final tgt = uh.targetValue ?? 0;
@@ -540,7 +610,7 @@ class _HabitHomeViewState extends State<HabitHomeView> {
     );
   }
 
-  // ── Aylık takvim (loglar hedefe göre renkli) ──────────────
+  // -- Aylık takvim (loglar hedefe göre renkli) --------------
   Widget _calendar(BuildContext context, bool tr) {
     final now = DateTime.now();
     final first = DateTime(now.year, now.month, 1);
@@ -623,7 +693,7 @@ class _HabitHomeViewState extends State<HabitHomeView> {
     );
   }
 
-  // ── ortak küçük widget'lar ────────────────────────────────
+  // -- ortak küçük widget'lar --------------------------------
   Widget _stat(BuildContext context, IconData icon, String label, String value,
       {Color? color}) {
     return Container(
@@ -747,7 +817,7 @@ class _HabitHomeViewState extends State<HabitHomeView> {
       ];
 }
 
-// ─── Dairesel "C" milestone göstergesi (altta açıklık) ───────────────────────
+// --- Dairesel "C" milestone göstergesi (altta açıklık) -----------------------
 class MilestoneGaugePainter extends CustomPainter {
   final double fraction;
   final Color trackColor;

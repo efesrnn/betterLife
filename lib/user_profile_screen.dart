@@ -41,11 +41,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final h = await _repo.getUserHabitsPublic(widget.userId);
       final a = await _repo.getUserActivityFeed(widget.userId, limit: 20);
       final ms = await _repo.getMonthlyScores([widget.userId]);
+
+      // Relapse / silme olaylarini da akisa kat (tablo yoksa bos gecilir)
+      List<ActivityItem> events = [];
+      try {
+        events = await _repo.getHabitEvents(widget.userId, limit: 20);
+      } catch (_) {}
+      final merged = [...a, ...events]
+        ..sort((x, y) => y.ts.compareTo(x.ts));
+
       if (!mounted) return;
       final s = ms[widget.userId];
       setState(() {
         _habits = h;
-        _activities = a;
+        _activities = merged.take(20).toList();
         _monthly = s?.monthly ?? 0;
         _bestStreak = s?.bestStreak ?? 0;
         _loading = false;
@@ -71,6 +80,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         return AppStrings.activityStarted(habit);
       case 'MILESTONE':
         return AppStrings.activityMilestone(habit, a.milestoneDay ?? 0);
+      case 'RELAPSE':
+        return AppStrings.activityRelapse(habit);
+      case 'REMOVED':
+        return AppStrings.activityRemoved(habit);
       default:
         if (a.value == null) return AppStrings.activityLoggedClean(habit);
         return AppStrings.activityLogged(habit, _fmt(a.value!), a.unit ?? '');
@@ -83,6 +96,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         return Icons.flag_rounded;
       case 'MILESTONE':
         return Icons.emoji_events_rounded;
+      case 'RELAPSE':
+        return Icons.refresh_rounded;
+      case 'REMOVED':
+        return Icons.delete_outline_rounded;
       default:
         return Icons.edit_note_rounded;
     }
@@ -341,6 +358,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _activityTile(BuildContext context, ActivityItem a, String locale) {
+    // Olumsuz olaylar (sifirlama / silme) kirmizi gosterilir
+    final negative = a.kind == 'RELAPSE' || a.kind == 'REMOVED';
+    final color = negative ? Colors.redAccent : context.appAccent;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -354,10 +374,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           Container(
             padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
-              color: context.appAccent.withAlpha(22),
+              color: color.withAlpha(22),
               borderRadius: BorderRadius.circular(9),
             ),
-            child: Icon(_kindIcon(a.kind), color: context.appAccent, size: 16),
+            child: Icon(_kindIcon(a.kind), color: color, size: 16),
           ),
           const SizedBox(width: 12),
           Expanded(

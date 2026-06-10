@@ -1,15 +1,12 @@
-// ============================================================
-// HabitQuest - habit_models.dart
+// habit_models.dart
 // Veri modelleri, enum'lar, exception ve ortak yardimcilar.
-// habit_repository.dart bu dosyayi re-export eder; tuketiciler icin
-// import yuzeyi degismez (mevcut "import 'services/habit_repository.dart'"
-// ifadeleri tum modellere erismeye devam eder).
-// ============================================================
+// habit_repository.dart bu dosyayi re-export ettigi icin ekranlardaki
+// mevcut import satirlari degismeden tum modellere erisebilir.
 
 import 'dart:math' as math;
 
 /// Kademeli (gradual) program için gün bazlı hedef.
-/// start → target arası, totalDays günde, geometrik (log-lineer) eğriyle:
+/// start -> target arası, totalDays günde, geometrik (log-lineer) eğriyle:
 /// hızlı başlar, yavaşlar. dayIndex 0 = ilk gün.
 double gradualTargetForDay({
   required double start,
@@ -29,7 +26,7 @@ double gradualTargetForDay({
 String safeHabitIcon(String? icon) {
   final t = (icon ?? '').trim();
   if (t.isEmpty) return '🎯';
-  // ASCII harf/rakam/alt çizgi/tire/boşluk → emoji değil (isim/slug)
+  // ASCII harf/rakam/alt çizgi/tire/boşluk -> emoji değil (isim/slug)
   if (RegExp(r'^[A-Za-z0-9_\-\s\.]+$').hasMatch(t)) return '🎯';
   // Çok uzunsa da emoji değildir
   if (t.runes.length > 3) return '🎯';
@@ -65,26 +62,26 @@ enum ProgramType {
   static ProgramType fromString(String s) =>
       ProgramType.values.firstWhere((e) => e.value == s);
 
-  /// Returns the translation key for this program type.
-  /// Usage: programType.titleKey.tr()  (with easy_localization)
+  /// Bu program tipinin ceviri anahtari.
+  /// Kullanim: programType.titleKey.tr()
   String get titleKey => 'program_types.$value';
 }
 
 // ============================================================
-// EXCEPTION (carries message_key for easy_localization)
+// EXCEPTION (ceviri icin message_key tasir)
 // ============================================================
 
 class HabitQuestException implements Exception {
-  /// The i18n key from backend (e.g. "errors.already_logged_today")
-  /// Translate in UI: e.messageKey.tr()
+  /// Backend'den gelen ceviri anahtari (orn. "errors.already_logged_today").
+  /// Arayuzde e.messageKey.tr() ile cevrilir.
   final String messageKey;
 
-  /// Optional raw details for debugging
+  /// Hata ayiklama icin opsiyonel ham detay
   final String? details;
 
   HabitQuestException(this.messageKey, {this.details});
 
-  /// Parse from backend JSON response
+  /// Backend JSON cevabindan olusturur
   factory HabitQuestException.fromResponse(Map<String, dynamic>? data) {
     return HabitQuestException(
       data?['error_key'] ?? data?['error'] ?? 'errors.internal_error',
@@ -103,7 +100,7 @@ class HabitQuestException implements Exception {
 class HabitSearchResult {
   final String action;
 
-  /// i18n key — translate with: result.messageKey.tr()
+  /// Ceviri anahtari, result.messageKey.tr() ile cevrilir
   final String messageKey;
 
   final String? habitId;
@@ -112,7 +109,7 @@ class HabitSearchResult {
   final List<String>? suggestedPrograms;
   final bool geminiCalled;
 
-  /// For INVALID_HABIT: Gemini's rejection reason per locale
+  /// INVALID_HABIT durumunda Gemini'nin dil bazli red gerekcesi:
   /// {"tr": "...", "en": "..."}
   final Map<String, dynamic>? rejectionReason;
 
@@ -132,7 +129,7 @@ class HabitSearchResult {
   bool get isNewHabit => action == 'NEW_HABIT_CREATED';
   bool get isInvalid => action == 'INVALID_HABIT';
 
-  /// Get rejection reason for a specific locale (for INVALID_HABIT)
+  /// Istenen dildeki red gerekcesini dondurur (INVALID_HABIT icin)
   String? getRejectionReason(String locale) =>
       rejectionReason?[locale] ?? rejectionReason?['en'];
 
@@ -171,7 +168,7 @@ class HabitSuggestion {
     required this.similarity,
   });
 
-  /// Locale-aware title getter
+  /// Secili dile gore baslik
   String title(String locale) => locale == 'tr' ? titleTr : titleEn;
 
   factory HabitSuggestion.fromJson(Map<String, dynamic> json) {
@@ -221,14 +218,14 @@ class Habit {
   String title(String locale) => locale == 'tr' ? titleTr : titleEn;
   String? description(String locale) => locale == 'tr' ? descriptionTr : descriptionEn;
 
-  /// Görüntü diline göre birim etiketi (öğün → meals, vb.).
+  /// Görüntü diline göre birim etiketi (öğün -> meals, vb.).
   String unitFor(String locale) => localizedUnit(unit, locale);
 
-  /// Translation key for the category tag
-  /// Usage: habit.categoryKey.tr()
+  /// Kategori etiketinin ceviri anahtari.
+  /// Kullanim: habit.categoryKey.tr()
   String get categoryKey => 'categories.${categoryTag ?? "HEALTH"}';
 
-  /// Translation key for risk level
+  /// Risk seviyesinin ceviri anahtari
   String get riskKey => 'risk_levels.${riskLevel ?? "MEDIUM"}';
 
   factory Habit.fromJson(Map<String, dynamic> json) {

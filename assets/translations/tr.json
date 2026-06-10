@@ -63,9 +63,13 @@
     "keep_going": "Her gün daha güçlü",
     "days_clean": "gün temiz",
     "relapse_btn": "Bugün kaçamak yaptım",
+    "relapse_confirm_title": "Emin misin?",
+    "relapse_confirm_body": "Temiz gün sayacın ve ilerlemen sıfırlanacak. Bu işlem geri alınamaz.",
+    "relapse_confirm_btn": "Sıfırla",
     "today_target": "Bugünkü hedef",
     "log_today": "Bugünü logla",
     "logged_today": "Bugün loglandı",
+    "update_log": "Güncelle",
     "calendar_title": "Bu ay",
     "days_on_target": "Hedefe uyulan gün",
     "plan_progress": "Plan ilerlemesi",
@@ -111,7 +115,9 @@
     "language": "Dil",
     "language_label": "DİL",
     "turkish": "Türkçe",
-    "english": "English"
+    "english": "English",
+    "developer": "Geliştirici ayarları",
+    "developer_desc": "Bakım ve katalog araçları"
   },
   "nav": {
     "home": "Ana Sayfa"
@@ -195,8 +201,8 @@
     "catalog_title": "Alışkanlık Kataloğu",
     "no_catalog": "Katalogda henüz alışkanlık yok",
     "lung_health": "Akciğer Sağlığı",
-    "remove": "Alışkanlığı kaldır",
-    "remove_confirm": "{habit} takibi bırakılsın mı?",
+    "remove": "Alışkanlığı sil",
+    "remove_confirm": "{habit} silinsin mi? Serin ve ilerlemen kaybolacak.",
     "paused": "Duraklatıldı",
     "similarity": "eşleşme"
   },
@@ -288,7 +294,9 @@
     "started": "{habit} takibine başladı",
     "logged": "{habit}: {value} {unit}",
     "logged_clean": "{habit}: temiz kaldı",
-    "milestone": "{habit}: {n}. gün dönüm noktası 🎉"
+    "milestone": "{habit}: {n}. gün dönüm noktası 🎉",
+    "relapse": "{habit}: sayacı sıfırladı",
+    "removed": "{habit} takibini bıraktı"
   },
   "score": {
     "points": "puan",

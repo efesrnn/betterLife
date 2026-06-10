@@ -5,6 +5,7 @@ import 'supabase_options.dart';
 import 'auth_gate.dart';
 import 'app_theme.dart';
 import 'theme_service.dart';
+import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,10 @@ Future<void> main() async {
   );
 
   await ThemeService.instance.init();
+
+  // Push bildirimleri (FCM) kurulumu. Acilisi bloklamasin diye await yok;
+  // izin penceresi uygulama acildiktan hemen sonra gelir.
+  NotificationService.instance.init();
 
   runApp(
     EasyLocalization(

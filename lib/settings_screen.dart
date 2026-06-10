@@ -3,8 +3,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_theme.dart';
 import 'app_strings.dart';
+import 'developer_settings_screen.dart';
 import 'theme_service.dart';
-import 'services/habit_repository.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -21,7 +21,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _email = '';
   String _currentUsername = '';
   bool _isLoading = false;
-  bool _merging = false;
 
   @override
   void initState() {
@@ -93,22 +92,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _snack(AppStrings.errorWith(e), isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  // Admin: benzer alışkanlıkları tek çatı altında toplayan 24s işini elle
-  // tetikler (duplicate-habits edge function). Sonuç snackbar'da gösterilir.
-  Future<void> _runMerge() async {
-    setState(() => _merging = true);
-    try {
-      final res = await HabitRepository().runHabitDeduplication();
-      final merged = (res['merged'] as num?)?.toInt() ?? 0;
-      final promoted = (res['promoted'] as num?)?.toInt() ?? 0;
-      _snack(AppStrings.adminMergeDone(merged, promoted));
-    } catch (e) {
-      _snack(AppStrings.adminMergeFailed(e), isError: true);
-    } finally {
-      if (mounted) setState(() => _merging = false);
     }
   }
 
@@ -214,82 +197,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _isLoading ? null : _updatePassword),
             const SizedBox(height: 32),
 
-            _sectionLabel(AppStrings.adminTitle),
+            _sectionLabel(AppStrings.developerSettings.toUpperCase()),
             const SizedBox(height: 12),
-            _adminMergeTile(),
+            _developerTile(),
           ],
         ),
       ),
     );
   }
 
-  Widget _adminMergeTile() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.appCard,
-        borderRadius: BorderRadius.circular(14),
+  // Gelistirici araclarina (merge, katalog duzenleme) gecis satiri
+  Widget _developerTile() {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const DeveloperSettingsScreen()),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.appCard,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
             Container(
               padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
                 color: context.appAccent.withAlpha(20),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.merge_type_rounded,
+              child: Icon(Icons.code_rounded,
                   color: context.appAccent, size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(AppStrings.adminMergeNow,
-                  style: TextStyle(
-                      color: context.appText,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700)),
-            ),
-          ]),
-          const SizedBox(height: 8),
-          Text(AppStrings.adminMergeDesc,
-              style:
-                  TextStyle(color: context.appSub, fontSize: 12, height: 1.4)),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 46,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.appAccent,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(AppStrings.developerSettings,
+                      style: TextStyle(
+                          color: context.appText,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text(AppStrings.developerSettingsDesc,
+                      style: TextStyle(color: context.appSub, fontSize: 12)),
+                ],
               ),
-              onPressed: _merging ? null : _runMerge,
-              child: _merging
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white)),
-                        const SizedBox(width: 10),
-                        Text(AppStrings.adminMergeRunning,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
-                      ],
-                    )
-                  : Text(AppStrings.adminMergeNow,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
-          ),
-        ],
+            Icon(Icons.chevron_right_rounded, color: context.appSub),
+          ],
+        ),
       ),
     );
   }

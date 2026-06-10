@@ -18,13 +18,13 @@ import 'package:easy_localization/easy_localization.dart';
 class AppStrings {
   AppStrings._();
 
-  // ── Genel ───────────────────────────────────────────────
+  // -- Genel -----------------------------------------------
   static String get appName => 'general.app_name'.tr();
   static String get save => 'general.save'.tr();
   static String get cancel => 'general.cancel'.tr();
   static String get remove => 'general.remove'.tr();
 
-  // ── Auth ────────────────────────────────────────────────
+  // -- Auth ------------------------------------------------
   static String get welcomeBack => 'auth.welcome_back'.tr();
   static String get startJourney => 'auth.start_journey'.tr();
   static String get login => 'auth.login'.tr();
@@ -37,7 +37,7 @@ class AppStrings {
   static String get tooManyAttempts => 'auth.too_many_attempts'.tr();
   static String get unexpectedError => 'auth.unexpected_error'.tr();
 
-  // ── Email verification ──────────────────────────────────
+  // -- Email verification ----------------------------------
   static String get verifyEmailTitle => 'verify.title'.tr();
   static String get verifyEmailSubtitle => 'verify.subtitle'.tr();
   static String get verifyEmailHint => 'verify.hint'.tr();
@@ -50,11 +50,11 @@ class AppStrings {
       'verify.failed_to_resend'.tr(namedArgs: {'error': '$e'});
   static String get wrongEmailGoBack => 'verify.wrong_email'.tr();
 
-  // ── Onboarding: habit selection ─────────────────────────
+  // -- Onboarding: habit selection -------------------------
   static String get chooseHabit => 'habit_select.choose'.tr();
   static String get otherHabitHint => 'habit_select.other_hint'.tr();
 
-  // ── Onboarding: goal selection ──────────────────────────
+  // -- Onboarding: goal selection --------------------------
   static String get whatsYourGoal => 'goal_select.title'.tr();
   static String get goalQuitOnce => 'goal_select.quit_once'.tr();
   static String get goalQuitStepByStep => 'goal_select.quit_step'.tr();
@@ -62,12 +62,12 @@ class AppStrings {
   static String get goalReduceStepByStep => 'goal_select.reduce_step'.tr();
   static String get percentageHint => 'goal_select.percentage'.tr();
 
-  // ── Onboarding: username ────────────────────────────────
+  // -- Onboarding: username --------------------------------
   static String get whatShouldWeCallYou => 'username.title'.tr();
   static String get enterUsername => 'username.enter'.tr();
   static String get usernameMinChars => 'username.min_chars'.tr();
 
-  // ── Home ────────────────────────────────────────────────
+  // -- Home ------------------------------------------------
   static String habitTodaySuffix(String habit) =>
       'home.habit_today'.tr(namedArgs: {'habit': habit});
   static String get cigarettesToday => 'home.cigarettes_today'.tr();
@@ -82,7 +82,7 @@ class AppStrings {
   static String daysStreak(int n) =>
       'drawer.days_streak'.tr(namedArgs: {'n': '$n'});
 
-  // ── Home (yeni tasarım) ─────────────────────────────────
+  // -- Home (yeni tasarım) ---------------------------------
   static String get cleanTime => 'home.clean_time'.tr();
   static String get savedShort => 'home.saved_short'.tr();
   static String get lungsShort => 'home.lungs_short'.tr();
@@ -93,22 +93,26 @@ class AppStrings {
   static String get keepGoing => 'home.keep_going'.tr();
   static String get daysClean => 'home.days_clean'.tr();
   static String get relapseBtn => 'home.relapse_btn'.tr();
+  static String get relapseConfirmTitle => 'home.relapse_confirm_title'.tr();
+  static String get relapseConfirmBody => 'home.relapse_confirm_body'.tr();
+  static String get relapseConfirmBtn => 'home.relapse_confirm_btn'.tr();
   static String get todayTarget => 'home.today_target'.tr();
   static String get logTodayLabel => 'home.log_today'.tr();
   static String get loggedTodayMsg => 'home.logged_today'.tr();
+  static String get updateLogLabel => 'home.update_log'.tr();
   static String get calendarTitle => 'home.calendar_title'.tr();
   static String get daysOnTarget => 'home.days_on_target'.tr();
   static String get planProgress => 'home.plan_progress'.tr();
   static String get toGoal => 'home.to_goal'.tr();
 
-  // ── Check-in dialog ─────────────────────────────────────
+  // -- Check-in dialog -------------------------------------
   static String get dailyCheckIn => 'checkin.title'.tr();
   static String slipUpQuestion(String habit) =>
       'checkin.slip_up'.tr(namedArgs: {'habit': habit});
   static String get smokedQuestion => 'checkin.smoked'.tr();
   static String get stayedStrong => 'checkin.stayed_strong'.tr();
 
-  // ── Settings / cigarette info ───────────────────────────
+  // -- Settings / cigarette info ---------------------------
   static String get cigaretteInfo => 'cigarette.info'.tr();
   static String get priceCheck => 'cigarette.price_check'.tr();
   static String get priceCheckBody => 'cigarette.price_check_body'.tr();
@@ -138,16 +142,18 @@ class AppStrings {
   static String errorWith(Object e) =>
       'settings.error'.tr(namedArgs: {'error': '$e'});
 
-  // ── Language (dil seçici) ───────────────────────────────
+  // -- Language (dil seçici) -------------------------------
   static String get language => 'settings.language'.tr();
   static String get languageLabel => 'settings.language_label'.tr();
   static String get turkish => 'settings.turkish'.tr();
   static String get english => 'settings.english'.tr();
+  static String get developerSettings => 'settings.developer'.tr();
+  static String get developerSettingsDesc => 'settings.developer_desc'.tr();
 
-  // ── Navigation ──────────────────────────────────────────
+  // -- Navigation ------------------------------------------
   static String get home => 'nav.home'.tr();
 
-  // ── Drawer ──────────────────────────────────────────────
+  // -- Drawer ----------------------------------------------
   static String get defaultUser => 'drawer.default_user'.tr();
   static String get logout => 'drawer.logout'.tr();
   static String get uploadingPhoto => 'drawer.uploading_photo'.tr();
@@ -155,14 +161,14 @@ class AppStrings {
   static String errorUploading(Object e) =>
       'drawer.error_uploading'.tr(namedArgs: {'error': '$e'});
 
-  // ── Lungs ───────────────────────────────────────────────
+  // -- Lungs -----------------------------------------------
   static String get lungs => 'lungs.tab'.tr();
   static String get lungHealth => 'lungs.lung_health'.tr();
   static String get recoveryMilestones => 'lungs.recovery_milestones'.tr();
   static String get health => 'lungs.health'.tr();
   static String get recoveryProgress => 'lungs.recovery_progress'.tr();
 
-  // ── Friends / Leaderboard ───────────────────────────────
+  // -- Friends / Leaderboard -------------------------------
   static String get friends => 'friends.tab'.tr();
   static String get leaderboard => 'friends.leaderboard'.tr();
   static String get findFriend => 'friends.find_friend'.tr();
@@ -191,7 +197,7 @@ class AppStrings {
   static String get someone => 'friends.someone'.tr();
   static String get unknown => 'friends.unknown'.tr();
 
-  // ── Enum çevirileri (program / kategori / risk) ─────────
+  // -- Enum çevirileri (program / kategori / risk) ---------
   // Gemini bazen listede olmayan değerler döndürür (örn. ADDICTION_RECOVERY).
   // Çeviri bulunamazsa ham anahtar yerine okunabilir metne düşeriz.
   static String _humanize(String v) => v
@@ -208,7 +214,7 @@ class AppStrings {
   static String category(String tag) => _trOr('categories.$tag', tag);
   static String riskLevel(String level) => _trOr('risk_levels.$level', level);
 
-  // ── Habits ekranı ───────────────────────────────────────
+  // -- Habits ekranı ---------------------------------------
   static String get habitsTab => 'habits.tab'.tr();
   static String get myHabits => 'habits.my_habits'.tr();
   static String get addHabit => 'habits.add'.tr();
@@ -236,7 +242,7 @@ class AppStrings {
   static String get paused => 'habits.paused'.tr();
   static String get matchLabel => 'habits.similarity'.tr();
 
-  // ── Habit ekleme: plan/giriş alanları ───────────────────
+  // -- Habit ekleme: plan/giriş alanları -------------------
   static String get planTitle => 'add.details_title'.tr();
   static String get startAmount => 'add.start_amount'.tr();
   static String get targetAmount => 'add.target_amount'.tr();
@@ -262,7 +268,7 @@ class AppStrings {
   static String programDesc(String value) =>
       _trOr('program_desc.$value', value);
 
-  // ── Habit detay ─────────────────────────────────────────
+  // -- Habit detay -----------------------------------------
   static String get detailTitle => 'detail.title'.tr();
   static String get detailImpact => 'detail.impact'.tr();
   static String get detailHealth => 'detail.health'.tr();
@@ -285,12 +291,12 @@ class AppStrings {
   static String get detailEditPlan => 'detail.edit_plan'.tr();
   static String get detailUpdated => 'detail.updated'.tr();
 
-  // ── Check-in hatırlatma ─────────────────────────────────
+  // -- Check-in hatırlatma ---------------------------------
   static String checkinReminderBody(int n) =>
       'checkin.reminder_body'.tr(namedArgs: {'n': '$n'});
   static String get checkinGoLog => 'checkin.go_log'.tr();
 
-  // ── Admin ───────────────────────────────────────────────
+  // -- Admin -----------------------------------------------
   static String get adminTitle => 'admin.title'.tr();
   static String get adminMergeNow => 'admin.merge_now'.tr();
   static String get adminMergeDesc => 'admin.merge_desc'.tr();
@@ -301,7 +307,7 @@ class AppStrings {
   static String adminMergeFailed(Object e) =>
       'admin.merge_failed'.tr(namedArgs: {'error': e.toString()});
 
-  // ── Profil / aktivite akışı ─────────────────────────────
+  // -- Profil / aktivite akışı -----------------------------
   static String get profileHabits => 'profile.habits'.tr();
   static String get profileActivity => 'profile.activity'.tr();
   static String get profileNoActivity => 'profile.no_activity'.tr();
@@ -315,13 +321,17 @@ class AppStrings {
       'activity.logged_clean'.tr(namedArgs: {'habit': habit});
   static String activityMilestone(String habit, int n) =>
       'activity.milestone'.tr(namedArgs: {'habit': habit, 'n': '$n'});
+  static String activityRelapse(String habit) =>
+      'activity.relapse'.tr(namedArgs: {'habit': habit});
+  static String activityRemoved(String habit) =>
+      'activity.removed'.tr(namedArgs: {'habit': habit});
 
-  // ── Skor ────────────────────────────────────────────────
+  // -- Skor ------------------------------------------------
   static String get scorePts => 'score.points'.tr();
   static String get scoreThisMonth => 'score.this_month'.tr();
   static String get scoreTotal => 'score.total'.tr();
 
-  // ── Puan kırılımı (şeffaflık) ───────────────────────────
+  // -- Puan kırılımı (şeffaflık) ---------------------------
   static String get bdTitle => 'breakdown.title'.tr();
   static String get bdFormula => 'breakdown.formula'.tr();
   static String get bdBase => 'breakdown.base'.tr();

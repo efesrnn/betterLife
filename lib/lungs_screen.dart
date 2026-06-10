@@ -21,7 +21,7 @@ const _milestones = [
   _Milestone(95.0, 'Lung cancer risk reducing',    '5 years'),
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 class LungsScreen extends StatefulWidget {
   final double lungScore;
@@ -45,7 +45,7 @@ class _LungsScreenState extends State<LungsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header row ──────────────────────────────────────────────────
+          // Baslik satiri
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
             child: Row(
@@ -62,7 +62,7 @@ class _LungsScreenState extends State<LungsScreen> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                // Tappable small ring — toggles view
+                // Kucuk halkaya dokununca gorunum degisir
                 GestureDetector(
                   onTap: () =>
                       setState(() => _showMilestones = !_showMilestones),
@@ -72,7 +72,7 @@ class _LungsScreenState extends State<LungsScreen> {
             ),
           ),
 
-          // ── Content ─────────────────────────────────────────────────────
+          // Icerik
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
@@ -94,7 +94,7 @@ class _LungsScreenState extends State<LungsScreen> {
   }
 }
 
-// ─── Small tappable ring in top right ────────────────────────────────────────
+// Sag ustteki tiklanabilir kucuk ilerleme halkasi
 
 class _SmallProgressRing extends StatelessWidget {
   final double score;
@@ -140,7 +140,7 @@ class _SmallProgressRing extends StatelessWidget {
   }
 }
 
-// ─── Main view: big gauge + 2 info cards ─────────────────────────────────────
+// Ana gorunum: buyuk gosterge ve iki bilgi karti
 
 class _MainLungsView extends StatelessWidget {
   final double score;
@@ -155,7 +155,7 @@ class _MainLungsView extends StatelessWidget {
       child: Column(
         children: [
           const SizedBox(height: 16),
-          // Big circular gauge
+          // Buyuk dairesel gosterge
           Center(
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0.0, end: normalized),
@@ -210,11 +210,11 @@ class _MainLungsView extends StatelessWidget {
           ),
           const SizedBox(height: 32),
 
-          // Status card
+          // Durum karti
           _statusCard(context, normalized),
           const SizedBox(height: 12),
 
-          // Recovery progress card
+          // Iyilesme sureci karti
           _infoCard(
             context,
             icon: Icons.timeline_rounded,
@@ -313,7 +313,7 @@ class _MainLungsView extends StatelessWidget {
   }
 }
 
-// ─── Milestone list view ──────────────────────────────────────────────────────
+// Kilometre tasi listesi
 
 class _MilestoneListView extends StatelessWidget {
   final double score;
@@ -342,7 +342,7 @@ class _MilestoneListView extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Small circular progress
+              // Kucuk dairesel ilerleme
               SizedBox(
                 width: 58,
                 height: 58,

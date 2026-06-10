@@ -11,6 +11,7 @@ import 'habits_screen.dart';
 import 'home_habit_view.dart';
 import 'settings_screen.dart';
 import 'services/habit_repository.dart';
+import 'services/notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -458,6 +459,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _logout() async {
+    // Cikis yapan cihaza bildirim gitmemesi icin token kaydini sil
+    await NotificationService.instance.removeToken();
     await supabase.auth.signOut();
     if (mounted) {
       Navigator.pushAndRemoveUntil(
@@ -468,7 +471,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Habit-aware günlük check-in. QUIT (tamamen bırak) modunda sayaç yoktur,
-  // sorulması anlamsız → atlanır. Yalnızca bugün loglanmamış azalt/kademeli/koru
+  // sorulması anlamsız -> atlanır. Yalnızca bugün loglanmamış azalt/kademeli/koru
   // habit'leri varsa tek bir hatırlatma çıkar ve kullanıcıyı Home'a yönlendirir.
   Future<void> _showCheckInDialog() async {
     List<UserHabit> habits;
@@ -599,7 +602,9 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
       ),
       drawer: _buildDrawer(context, isCigarette, currentStreak),
-      body: screens[safeIndex],
+      // IndexedStack sekmeler arasi gecislerde ekran state'ini korur,
+      // boylece girilen degerler kaybolmaz.
+      body: IndexedStack(index: safeIndex, children: screens),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: context.appCard,
         selectedItemColor: context.appAccent,
@@ -1106,7 +1111,7 @@ class _AnimatedFlameState extends State<AnimatedFlame>
   }
 }
 
-// ─── Dairesel "C" milestone göstergesi (altta açıklık) ───────────────────────
+// --- Dairesel "C" milestone göstergesi (altta açıklık) -----------------------
 class _GaugePainter extends CustomPainter {
   final double fraction;
   final Color trackColor;
@@ -1123,7 +1128,7 @@ class _GaugePainter extends CustomPainter {
     final rect = Rect.fromLTWH(
         stroke / 2, stroke / 2, size.width - stroke, size.height - stroke);
     const start = 3.1415926 * 0.75; // 135° (sol-alt)
-    const sweep = 3.1415926 * 1.5; // 270° → altta 90° boşluk ("C")
+    const sweep = 3.1415926 * 1.5; // 270° -> altta 90° boşluk ("C")
     final track = Paint()
       ..color = trackColor
       ..style = PaintingStyle.stroke

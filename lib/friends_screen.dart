@@ -95,7 +95,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
       }
     }
 
-    // Aylık puanları getir → leaderboard PUANA göre sıralanır (her ay sıfırlanır).
+    // Aylık puanları getir -> leaderboard PUANA göre sıralanır (her ay sıfırlanır).
     // Streak hâlâ tutulur ve gösterilir, ama sıralama puana göredir.
     try {
       final ids = list.map((e) => e['id'].toString()).toList();
@@ -482,7 +482,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
   }
 }
 
-// ─── Friend Requests ──────────────────────────────────────────────────────────
+// --- Friend Requests ----------------------------------------------------------
 
 class FriendRequestsScreen extends StatefulWidget {
   const FriendRequestsScreen({super.key});
@@ -648,7 +648,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
   }
 }
 
-// ─── Add Friend ───────────────────────────────────────────────────────────────
+// --- Add Friend ---------------------------------------------------------------
 
 class AddFriendScreen extends StatefulWidget {
   const AddFriendScreen({super.key});
@@ -728,7 +728,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
   }
 }
 
-// ─── Discover User Tile ───────────────────────────────────────────────────────
+// --- Discover User Tile -------------------------------------------------------
 
 class DiscoverUserTile extends StatefulWidget {
   final Map<String, dynamic> user;

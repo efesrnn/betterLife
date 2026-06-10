@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-// Dark palette — charcoal gray + green accent (matches reference screenshot)
+// Koyu tema paleti - antrasit gri zemin ve yesil vurgu
 const _dBg     = Color(0xFF181818);
 const _dCard   = Color(0xFF252525);
 const _dBorder = Color(0xFF333333);
@@ -9,7 +9,7 @@ const _dSub    = Color(0xFF888888);
 const _dText   = Color(0xFFFFFFFF);
 const _dTextDim= Color(0xFF666666);
 
-// Light palette — light gray bg + white cards + green accent
+// Acik tema paleti - acik gri zemin, beyaz kartlar ve yesil vurgu
 const _lBg     = Color(0xFFF0F0F0);
 const _lCard   = Color(0xFFFFFFFF);
 const _lBorder = Color(0xFFE0E0E0);

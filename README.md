@@ -1,199 +1,82 @@
-# Better Life 🌱
-### Habit Tracking & Social Competition Platform
+# Better Life
 
-> A cross-platform mobile application that helps users build lasting habits through intelligent tracking, streak-based motivation, and competitive social features — powered by Flutter, Supabase, and Google Gemini AI.
+A habit tracking app built with Flutter that helps you quit, reduce or build habits with a gamified scoring system, streaks and a friend leaderboard.
 
----
+## Features
 
-## 📱 Overview
+**Multiple habit programs.** Each habit can be tracked with a different plan: quit completely (cold turkey with a clean-time counter), gradual decrease (the app calculates a daily target that shrinks over your chosen timeline), reduce to a fixed daily limit, gradual increase or maintain. Negative habits like smoking get quit oriented plans, positive ones like reading get build oriented plans.
 
-Better Life is a full-stack mobile application built with Flutter and Supabase that transforms habit building into an engaging, competitive experience. Users can track multiple habits simultaneously, earn streak bonuses, compete with friends on leaderboards, and receive AI-powered validation for their logged activities.
+**AI assisted habit catalog.** You can pick a habit from the shared catalog or type anything you want. New entries are evaluated by Gemini on the backend, which validates the habit, assigns an icon, a unit, difficulty and impact scores, and merges duplicates so the community catalog stays clean.
 
-The application is designed from the ground up to be **language-agnostic** — supporting multiple locales without any logic changes to the backend.
+**Scoring, streaks and milestones.** Every daily log is scored server side: base points multiplied by difficulty and a streak multiplier, plus effort and milestone bonuses and penalties for missed targets. Day milestones (7, 30, 90 and so on) grant extra points, and logging several habits in a row earns combo bonuses. A log can be updated during the day and the score is recalculated correctly.
 
----
+**Money and health feedback.** For habits with a unit cost the app shows how much money you saved. Quitting smoking also unlocks a lung recovery screen with medical recovery milestones.
 
-## ✨ Features
+**Social.** Add friends, compete on a monthly leaderboard and visit public profiles that show each user's habits, a transparent score breakdown for every habit, and a recent activity feed that also records streak resets and removed habits.
 
-### 🎯 Habit Tracking
-- Create and manage multiple habits simultaneously with independent tracking
-- Flexible scoring engine that rewards consistency and effort
-- Daily, weekly, and custom frequency support for diverse habit types
+**Push notifications.** Firebase Cloud Messaging is integrated. Device tokens are stored in Supabase so the backend can send reminders to users who have not logged today.
 
-### 🔥 Streak System
-- Per-habit streak tracking — each habit maintains its own independent streak counter
-- **Combo streak bonus system** that rewards users who complete multiple habits consecutively
-- Streak recovery and grace period logic to prevent motivation loss
+**Other.** Dark and light themes, Turkish and English localization, a daily check-in dialog, confirmation dialogs for destructive actions, and a developer settings screen with maintenance tools (duplicate merge, manual catalog editing and habit deletion).
 
-### 🤖 AI-Powered Validation
-- Integrated with the **Google Gemini API** to validate habit completions and logged activities
-- Dynamic validation prompts ensure that user-submitted evidence matches the habit goal
-- Prevents dishonest logging while keeping the experience frictionless for genuine completions
+## Tech stack
 
-### 🏆 Social Competition (HabitArena)
-- Compete with friends and other users on habit-specific leaderboards
-- Challenge system to pit users head-to-head on shared habit goals
-- Score-based ranking updated in real time via Supabase subscriptions
+- Flutter (Dart) for the mobile app
+- Supabase: auth, Postgres with RLS, RPC functions and edge functions
+- Google Gemini for habit evaluation on the backend
+- Firebase Cloud Messaging with flutter_local_notifications for push notifications
+- easy_localization for i18n
 
-### 🌍 Full Internationalization
-- Cross-language semantic search powered by **pgvector** with multi-locale embeddings
-- All UI strings are rendered client-side using **Flutter's easy_localization** package
-- Supabase Edge Functions return only machine-readable **i18n keys** — keeping the backend fully language-agnostic and independent of any locale
+## Screenshots
 
----
+| Home (quit plan) | Home (gradual reduce) | My habits |
+| --- | --- | --- |
+| ![Home quit](docs/screenshots/home_quit.png) | ![Home reduce](docs/screenshots/home_reduce.png) | ![Habits](docs/screenshots/habits_list.png) |
 
-## 🛠️ Tech Stack
+| Add habit (AI search) | Choose a program | Habit details |
+| --- | --- | --- |
+| ![Add habit](docs/screenshots/add_habit.png) | ![Program selection](docs/screenshots/add_habit_plan.png) | ![Habit detail](docs/screenshots/habit_detail.png) |
 
-| Layer | Technology |
-|---|---|
-| Mobile (Frontend) | Flutter / Dart |
-| Backend & Auth | Supabase (PostgreSQL, Auth, Storage) |
-| Edge Functions | Supabase Edge Functions (Deno / TypeScript) |
-| AI Validation | Google Gemini API |
-| Semantic Search | pgvector (multi-locale embeddings) |
-| Internationalization | easy_localization |
-| Real-time | Supabase Realtime Subscriptions |
+| Leaderboard | Profile and activity | Lung recovery |
+| --- | --- | --- |
+| ![Leaderboard](docs/screenshots/leaderboard.png) | ![Profile](docs/screenshots/profile.png) | ![Lungs](docs/screenshots/lungs.png) |
 
----
+| Settings |
+| --- |
+| ![Settings](docs/screenshots/settings.png) |
 
-## 🏗️ Architecture
+## Getting started
 
-```
-┌─────────────────────────────────────────────┐
-│               Flutter Client                │
-│  ┌──────────────┐   ┌─────────────────────┐ │
-│  │ easy_localize│   │  Supabase Flutter   │ │
-│  │  (i18n keys  │   │       SDK           │ │
-│  │  → UI text)  │   └─────────────────────┘ │
-└──────────────────────────────┬──────────────┘
-                               │
-┌──────────────────────────────▼──────────────┐
-│              Supabase Backend               │
-│  ┌─────────────┐  ┌────────┐  ┌──────────┐ │
-│  │ Edge Funcs  │  │  Auth  │  │ Realtime │ │
-│  │(returns i18n│  │        │  │  (scores,│ │
-│  │    keys)    │  └────────┘  │ streaks) │ │
-│  └──────┬──────┘              └──────────┘ │
-│         │                                  │
-│  ┌──────▼──────────────────────────┐       │
-│  │   PostgreSQL + pgvector         │       │
-│  │  (habits, scores, embeddings)   │       │
-│  └─────────────────────────────────┘       │
-└──────────────────────────────┬──────────────┘
-                               │
-┌──────────────────────────────▼──────────────┐
-│           Google Gemini API                 │
-│       (Activity Validation Engine)          │
-└─────────────────────────────────────────────┘
+1. Install Flutter 3.x and run `flutter pub get`.
+2. Create `lib/supabase_options.dart` with your Supabase project URL and anon key (the file is gitignored on purpose):
+
+```dart
+const String supabaseUrl = 'https://YOUR_PROJECT.supabase.co';
+const String supabaseAnonKey = 'YOUR_ANON_KEY';
 ```
 
-### Key Architectural Decisions
+3. Run the SQL files under `docs/sql/` in the Supabase SQL editor (device tokens, habit events, same-day log updates, admin policies).
+4. For push notifications add your own `google-services.json` from Firebase and follow `docs/NOTIFICATION_SETUP.md`.
+5. `flutter run`
 
-- **Language-agnostic backend:** Edge Functions never return human-readable strings. All user-facing text is resolved on the client using i18n key maps — making the entire backend locale-independent and easy to extend to new languages.
-- **Independent streak tracking:** Each habit maintains its own streak state, decoupled from other habits. This allows granular recovery logic and per-habit analytics.
-- **Combo bonus layer:** A separate scoring layer sits on top of individual habit scores to reward cross-habit consistency without polluting per-habit data.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Flutter SDK `>=3.0.0`
-- Dart SDK `>=3.0.0`
-- A [Supabase](https://supabase.com) project
-- A [Google Gemini API](https://ai.google.dev) key
-- Supabase CLI (for deploying Edge Functions)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/efesrnn/better-life.git
-   cd better-life
-   ```
-
-2. **Install dependencies**
-   ```bash
-   flutter pub get
-   ```
-
-3. **Configure environment**
-
-   Create a `.env` file in the project root:
-   ```env
-   SUPABASE_URL=your_supabase_project_url
-   SUPABASE_ANON_KEY=your_supabase_anon_key
-   GEMINI_API_KEY=your_gemini_api_key
-   ```
-
-4. **Set up the database**
-
-   Run the SQL migrations located in `/supabase/migrations` against your Supabase project, or use the Supabase CLI:
-   ```bash
-   supabase db push
-   ```
-
-5. **Deploy Edge Functions**
-   ```bash
-   supabase functions deploy
-   ```
-
-6. **Run the app**
-   ```bash
-   flutter run
-   ```
-
----
-
-## 📂 Project Structure
+## Project structure
 
 ```
-better-life/
-├── lib/
-│   ├── core/
-│   │   ├── scoring/          # Scoring engine & combo bonus logic
-│   │   ├── streak/           # Per-habit streak tracking
-│   │   └── i18n/             # Localization key maps
-│   ├── features/
-│   │   ├── habits/           # Habit CRUD & tracking screens
-│   │   ├── arena/            # Social competition & leaderboards
-│   │   ├── validation/       # Gemini API integration
-│   │   └── auth/             # Supabase Auth flows
-│   └── main.dart
-├── supabase/
-│   ├── functions/            # Edge Functions (Deno/TypeScript)
-│   └── migrations/           # PostgreSQL schema & pgvector setup
-└── assets/
-    └── i18n/                 # Locale JSON files (en, tr, ...)
+lib/
+  main.dart                       app entry, Supabase and FCM init
+  auth_gate.dart                  session check and routing
+  home_screen.dart                main shell with tabs and drawer
+  home_habit_view.dart            per habit dashboard (counter, calendar, stats)
+  habits_screen.dart              habit list, add flow and catalog
+  habit_detail_screen.dart        plan editing and habit details
+  friends_screen.dart             leaderboard and friend requests
+  user_profile_screen.dart        public profile and activity feed
+  lungs_screen.dart               lung recovery view for smoking
+  settings_screen.dart            account, theme, language, developer entry
+  developer_settings_screen.dart  maintenance tools
+  services/
+    habit_repository.dart         all Supabase access
+    habit_models.dart             data models and helpers
+    notification_service.dart     FCM tokens and local notifications
+assets/translations/              tr.json and en.json
+docs/                             setup guides and SQL migrations
 ```
-
----
-
-## 🌐 Internationalization
-
-Better Life uses a strict separation between backend logic and language rendering:
-
-1. **Edge Functions** process all business logic and return structured responses with **i18n keys** (e.g., `habit.streak.broken`, `validation.failed.evidence_missing`).
-2. **Flutter client** maps these keys to locale-specific strings via `easy_localization`.
-3. **Semantic search** across habits and activities uses `pgvector` embeddings generated for each supported locale, enabling accurate cross-language search results.
-
-To add a new language, only a new JSON file under `assets/i18n/` is required — no backend changes needed.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please open an issue first to discuss what you'd like to change.
-
-1. Fork the repository
-2. Create your feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m 'Add your feature'`
-4. Push to the branch: `git push origin feature/your-feature`
-5. Open a Pull Request
-
----
-
-## 👤 Authors
-
-**Efe Serin & Alp Koçak**

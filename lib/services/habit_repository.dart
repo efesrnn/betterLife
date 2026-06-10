@@ -1,8 +1,6 @@
-// ============================================================
-// HabitQuest - habit_repository.dart (veri katmani)
-// Yalnizca Supabase erisimi (HabitRepository). Modeller/yardimcilar
-// habit_models.dart'ta; buradan re-export edilir.
-// ============================================================
+// habit_repository.dart (veri katmani)
+// Tum Supabase erisimi bu sinifta toplanir. Modeller ve yardimcilar
+// habit_models.dart dosyasinda durur, buradan re-export edilir.
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -21,9 +19,9 @@ class HabitRepository {
   // HABIT SEARCH & CREATE
   // ========================================================
 
-  /// locale parameter is passed to backend so Gemini knows
-  /// what language the user typed in. Does NOT affect error messages
-  /// (those come as keys, Flutter translates them).
+  /// locale parametresi backend'e gider, boylece Gemini kullanicinin
+  /// hangi dilde yazdigini bilir. Hata mesajlarini etkilemez
+  /// (onlar anahtar olarak gelir, cevirisini Flutter yapar).
   /// [forceNew] true ise backend benzerlik eşleştirmesini atlar ve doğrudan
   /// yeni habit oluşturur (kullanıcı "benzeri olsa da yeni ekle" dediğinde).
   Future<HabitSearchResult> searchOrCreateHabit({
@@ -88,7 +86,7 @@ class HabitRepository {
     }
 
     // upsert: aynı (user_id, habit_id) daha önce 'kaldırılmış' (duraklatılmış)
-    // olabilir — satır DB'de kalır. insert yerine upsert ile o satırı yeniden
+    // olabilir - satır DB'de kalır. insert yerine upsert ile o satırı yeniden
     // etkinleştirip baştan başlatıyoruz (23505 unique çakışmasını önler).
     final data = await _client
         .from('user_habits')
@@ -112,7 +110,7 @@ class HabitRepository {
         .select()
         .maybeSingle();
 
-    // Insert başarılı ama RLS RETURNING'i gizlemiş olabilir → null gelebilir.
+    // Insert başarılı ama RLS RETURNING'i gizlemiş olabilir -> null gelebilir.
     // Bu durumda eklendi kabul edip minimal nesne döndürürüz (çağıran zaten
     // listeyi yeniden yüklüyor).
     if (data == null) {
@@ -155,7 +153,7 @@ class HabitRepository {
   /// Streak/puan/combo DB tarafında hesaplanır. Hata jsonb içinde döner.
   Future<Map<String, dynamic>> logDailyValue(
       String userHabitId, double reportedValue) async {
-    // Yalnızca zorunlu parametreler — opsiyonellere açıkça null göndermek
+    // Yalnızca zorunlu parametreler - opsiyonellere açıkça null göndermek
     // PostgREST'te fonksiyon eşleşmesini bozabiliyor; DB default'larına bırak.
     final res = await _client.rpc('submit_daily_log', params: {
       'p_user_habit_id': userHabitId,
@@ -163,7 +161,7 @@ class HabitRepository {
     });
     final map =
         (res is Map) ? Map<String, dynamic>.from(res) : <String, dynamic>{};
-    // RPC handled hataları jsonb {error: '...'} olarak döner → görünür yap.
+    // RPC handled hataları jsonb {error: '...'} olarak döner -> görünür yap.
     if (map['error'] != null) {
       throw HabitQuestException('errors.${map['error']}',
           details: map['detail']?.toString());
@@ -177,6 +175,52 @@ class HabitRepository {
       'started_at': DateTime.now().toIso8601String(),
       'current_streak': 0,
     }).eq('id', userHabitId);
+  }
+
+  /// Profil akışında görünen olay kaydı (RELAPSE veya REMOVED).
+  /// Habit başlığı ve ikon o anki haliyle saklanır ki habit sonradan
+  /// silinse bile akışta düzgün görünsün. Tablo yoksa sessizce geçilir.
+  Future<void> logHabitEvent({
+    required String userHabitId,
+    required String eventType,
+    String? titleTr,
+    String? titleEn,
+    String? icon,
+  }) async {
+    try {
+      await _client.from('habit_events').insert({
+        'user_id': _userId,
+        'user_habit_id': userHabitId,
+        'event_type': eventType,
+        'title_tr': titleTr,
+        'title_en': titleEn,
+        'icon': icon,
+      });
+    } catch (_) {
+      // olay kaydı tutulamasa bile asıl işlemi engellemeyelim
+    }
+  }
+
+  /// Bir kullanıcının relapse / habit kaldırma olayları (profil akışı için).
+  Future<List<ActivityItem>> getHabitEvents(String userId,
+      {int limit = 20}) async {
+    final data = await _client
+        .from('habit_events')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false)
+        .limit(limit);
+    return (data as List).map((e) {
+      return ActivityItem(
+        kind: e['event_type']?.toString() ?? 'RELAPSE',
+        ts: DateTime.tryParse(e['created_at'].toString())?.toLocal() ??
+            DateTime.now(),
+        slug: '',
+        titleTr: e['title_tr'] ?? '',
+        titleEn: e['title_en'] ?? '',
+        icon: e['icon'],
+      );
+    }).toList();
   }
 
   /// Detay ekranından plan düzenleme: başlangıç (eski kullanım), hedef, maliyet.
@@ -353,6 +397,32 @@ class HabitRepository {
   // CATALOG & MILESTONES
   // ========================================================
 
+  /// Gelistirici araci: katalogdaki bir habit'in alanlarini elle gunceller.
+  /// RLS'e takilmamak icin SECURITY DEFINER bir RPC kullanilir; yetki
+  /// kontrolu fonksiyonun icinde yapilir (docs/sql/habits_admin_policy.sql).
+  Future<void> updateHabitAttributes(
+      String habitId, Map<String, dynamic> patch) async {
+    if (patch.isEmpty) return;
+    final res = await _client.rpc('admin_update_habit', params: {
+      'p_habit_id': habitId,
+      'p_patch': patch,
+    });
+    final map =
+        (res is Map) ? Map<String, dynamic>.from(res) : <String, dynamic>{};
+    if (map['error'] != null) {
+      throw Exception(
+          "admin_update_habit: ${map['error']} (fonksiyon kurulu mu? docs/sql/habits_admin_policy.sql)");
+    }
+  }
+
+  /// Gelistirici araci: habit'i katalogdan kaldirir.
+  /// Satiri gercekten silmek yerine is_valid=false yapilir (soft delete);
+  /// boylece bu habit'e bagli eski kullanici kayitlari bozulmaz ve katalog
+  /// sorgulari (is_valid=true filtresi) habit'i artik gostermez.
+  Future<void> deleteHabit(String habitId) async {
+    await updateHabitAttributes(habitId, {'is_valid': false});
+  }
+
   Future<List<Habit>> getHabitCatalog({String? categoryTag}) async {
     var query = _client.from('habits').select().eq('is_valid', true);
     if (categoryTag != null) query = query.eq('category_tag', categoryTag);
@@ -370,7 +440,7 @@ class HabitRepository {
   }
 
   // ========================================================
-  // PUBLIC PROFILE (herkes herkesi görebilir — SECURITY DEFINER RPC)
+  // PUBLIC PROFILE (herkes herkesi görebilir - SECURITY DEFINER RPC)
   // ========================================================
 
   /// Bir kullanıcının (herkese açık) aktif alışkanlıkları.
