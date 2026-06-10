@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'app_theme.dart';
 import 'auth_screen.dart';
 import 'habit_selection_screen.dart';
 import 'home_screen.dart';
@@ -28,14 +29,15 @@ class _AuthGateState extends State<AuthGate> {
     if (!mounted) return;
 
     if (session != null) {
-      // Kullanıcı giriş yapmış. Peki kurulumu bitirmiş mi?
-      final isSetupComplete = session.user.userMetadata?['is_setup_complete'] ?? false;
-
+      // E-posta doğrulaması kaldırıldı: oturum varsa doğrudan devam.
+      final isSetupComplete =
+          session.user.userMetadata?['is_setup_complete'] ?? false;
       if (isSetupComplete) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())); // DEĞİŞTİ
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()));
       } else {
-        // Giriş yapmış ama kurulumu tamamlamadan çıkmış -> Alışkanlık seçimine
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HabitSelectionScreen()));
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => const HabitSelectionScreen()));
       }
     } else {
       // Hiç giriş yapmamış -> Login Ekranına
@@ -45,11 +47,11 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    // Kontrol yapılırken ekranda görünecek siyah yükleniyor ikonu
-    return const Scaffold(
-      backgroundColor: Colors.white,
+    // Oturum kontrol edilirken gösterilen, temaya uyumlu yükleme ekranı
+    return Scaffold(
+      backgroundColor: context.appBg,
       body: Center(
-        child: CircularProgressIndicator(color: Colors.black),
+        child: CircularProgressIndicator(color: context.appAccent),
       ),
     );
   }

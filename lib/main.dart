@@ -1,21 +1,30 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_options.dart';
-import 'habit_selection_screen.dart'; // YENİ: Dosyamızı buraya dahil ettik
-import 'auth_screen.dart';
 import 'auth_gate.dart';
+import 'app_theme.dart';
+import 'theme_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
 
   await Supabase.initialize(
     url: supabaseUrl,
     anonKey: supabaseAnonKey,
   );
 
-  runApp(const MyApp());
+  await ThemeService.instance.init();
+
+  runApp(
+    EasyLocalization(
+      supportedLocales: const [Locale('tr'), Locale('en')],
+      path: 'assets/translations',
+      fallbackLocale: const Locale('tr'),
+      child: const MyApp(),
+    ),
+  );
 }
 
 final supabase = Supabase.instance.client;
@@ -25,15 +34,21 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Better Life',
-      debugShowCheckedModeBanner: false, // Sağ üstteki "DEBUG" yazısını kaldırır
-      theme: ThemeData(
-        fontFamily: 'Comic Sans MS', // Tasarımın el çizimi hissiyatını artırmak için eklenebilir (opsiyonel)
-        scaffoldBackgroundColor: Colors.white,
-      ),
-      // YENİ: Başlangıç ekranımızı tasarladığımız ekran yapıyoruz
-      home: const AuthGate(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeService.instance.notifier,
+      builder: (context, themeMode, child) {
+        return MaterialApp(
+          title: 'Better Life',
+          debugShowCheckedModeBanner: false,
+          localizationsDelegates: context.localizationDelegates,
+          supportedLocales: context.supportedLocales,
+          locale: context.locale,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: themeMode,
+          home: const AuthGate(),
+        );
+      },
     );
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'app_theme.dart';
+import 'app_strings.dart';
 import 'habit_selection_screen.dart';
 import 'home_screen.dart';
 
@@ -11,14 +13,11 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  // Bu değişken true ise Login, false ise Sign Up ekranı gösterilir
   bool _isLogin = true;
   bool _isLoading = false;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  // Supabase bağlantımızı alıyoruz
   final supabase = Supabase.instance.client;
 
   @override
@@ -28,15 +27,15 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  // Giriş Yapma / Kayıt Olma Fonksiyonu
   Future<void> _authenticate() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password.'), backgroundColor: Colors.red),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppStrings.enterEmailPassword),
+        backgroundColor: Colors.redAccent,
+      ));
       return;
     }
 
@@ -44,149 +43,133 @@ class _AuthScreenState extends State<AuthScreen> {
 
     try {
       if (_isLogin) {
-        // Supabase Giriş İşlemi
         await supabase.auth.signInWithPassword(email: email, password: password);
-      } else {
-        // Supabase Kayıt İşlemi
-        await supabase.auth.signUp(email: email, password: password);
-      }
-
-      if (mounted) {
-        // İşlem başarılı olduktan sonra kullanıcının verilerini (metadata) çekiyoruz
-        final user = supabase.auth.currentUser;
-        final isSetupComplete = user?.userMetadata?['is_setup_complete'] ?? false;
-
-        // Akıllı Yönlendirme (Auth Gate mantığı)
-        if (isSetupComplete) {
-          // Eğer önceden kurulumu tamamlamış (is_setup_complete: true) biriyse doğrudan Ana Sayfaya at
+        if (mounted) {
+          final user = supabase.auth.currentUser;
+          final isSetupComplete =
+              user?.userMetadata?['is_setup_complete'] ?? false;
           Navigator.pushReplacement(
             context,
-            // BURASI DEĞİŞTİ: DummyHomeScreen yerine HomeScreen yazıyoruz
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
+            MaterialPageRoute(
+              builder: (_) => isSetupComplete
+                  ? const HomeScreen()
+                  : const HabitSelectionScreen(),
+            ),
           );
-        } else {
-          // Yeni kayıt olmuşsa veya kurulumu yarım bırakmışsa en baştan Alışkanlık seçimine at
+        }
+      } else {
+        // E-posta doğrulaması yok: kayıt sonrası doğrudan onboarding.
+        await supabase.auth.signUp(email: email, password: password);
+        if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const HabitSelectionScreen()),
+            MaterialPageRoute(builder: (_) => const HabitSelectionScreen()),
           );
         }
       }
     } on AuthException catch (e) {
-      // Supabase'den gelen hatalar (örn: yanlış şifre)
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
-      );
-    } catch (e) {
-      // Diğer hatalar
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('An unexpected error occurred.'), backgroundColor: Colors.red),
-      );
-    } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        final message = e.message.toLowerCase().contains('rate limit')
+            ? AppStrings.tooManyAttempts
+            : e.message;
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message), backgroundColor: Colors.redAccent));
       }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppStrings.unexpectedError),
+            backgroundColor: Colors.redAccent));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.appBg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 1. Oval "Better Life" Logosu
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black87, width: 3),
-                    borderRadius: const BorderRadius.all(Radius.elliptical(150, 70)),
-                  ),
-                  child: const Text(
-                    'Better Life',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
+                // Logo
+                Image.asset(
+                  'assets/app-logo/better_life_logo.png',
+                  height: 160,
+                  fit: BoxFit.contain,
                 ),
-                const SizedBox(height: 50),
+                const SizedBox(height: 48),
 
-                // 2. Başlık Metni
                 Text(
-                  _isLogin ? 'WELCOME BACK' : 'START YOUR JOURNEY',
-                  style: const TextStyle(
-                    fontSize: 24,
+                  _isLogin ? AppStrings.welcomeBack : AppStrings.startJourney,
+                  style: TextStyle(
+                    fontSize: 20,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
+                    letterSpacing: 1.5,
+                    color: context.appText,
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
 
-                // 3. Email Kutusu
                 _buildTextField(
                   controller: _emailController,
-                  hintText: 'Email',
+                  hintText: AppStrings.email,
                   icon: Icons.email_outlined,
                   obscureText: false,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
 
-                // 4. Şifre Kutusu
                 _buildTextField(
                   controller: _passwordController,
-                  hintText: 'Password',
-                  icon: Icons.lock_outline,
+                  hintText: AppStrings.password,
+                  icon: Icons.lock_outline_rounded,
                   obscureText: true,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
 
-                // 5. Giriş / Kayıt Butonu
                 SizedBox(
                   width: double.infinity,
-                  height: 55,
+                  height: 52,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _authenticate,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black, // Siyah buton
-                      foregroundColor: Colors.white, // Beyaz yazı
+                      backgroundColor: context.appAccent,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: context.appBorder,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(0), // Tasarımımıza uygun köşeli
-                        side: const BorderSide(color: Colors.black, width: 2),
-                      ),
+                          borderRadius: BorderRadius.circular(14)),
                     ),
                     child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2.5))
                         : Text(
-                      _isLogin ? 'LOGIN' : 'SIGN UP',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-                    ),
+                            _isLogin ? AppStrings.login : AppStrings.signUp,
+                            style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5),
+                          ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
 
-                // 6. Sayfa Değiştirme Butonu (Login <-> Sign up)
                 TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _isLogin = !_isLogin; // Modu değiştir
-                    });
-                  },
+                  onPressed: () => setState(() => _isLogin = !_isLogin),
                   child: Text(
-                    _isLogin
-                        ? "Don't have an account? Sign up here."
-                        : "Already have an account? Login here.",
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline,
+                    _isLogin ? AppStrings.noAccount : AppStrings.haveAccount,
+                    style: TextStyle(
+                      color: context.appAccent,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -198,28 +181,32 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  // Tasarımımıza uygun kalın çerçeveli TextField oluşturan yardımcı widget
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,
     required IconData icon,
     required bool obscureText,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black87, width: 2),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: Colors.black87),
-          hintText: hintText,
-          hintStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 15),
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      style: TextStyle(
+          fontSize: 15, fontWeight: FontWeight.w600, color: context.appText),
+      decoration: InputDecoration(
+        prefixIcon: Icon(icon, color: context.appSub, size: 20),
+        hintText: hintText,
+        hintStyle: TextStyle(color: context.appSub, fontWeight: FontWeight.w400),
+        filled: true,
+        fillColor: context.appCard,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: context.appBorder, width: 1),
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: context.appAccent, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 16),
       ),
     );
   }

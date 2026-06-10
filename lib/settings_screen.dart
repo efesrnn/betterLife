@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'app_theme.dart';
+import 'app_strings.dart';
+import 'theme_service.dart';
+import 'services/habit_repository.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -10,12 +15,13 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final supabase = Supabase.instance.client;
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   String _email = '';
   String _currentUsername = '';
   bool _isLoading = false;
+  bool _merging = false;
 
   @override
   void initState() {
@@ -35,33 +41,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _updateUsername() async {
-    final newUsername = _usernameController.text.trim();
+    var newUsername = _usernameController.text
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+    if (newUsername.length > 24) newUsername = newUsername.substring(0, 24);
     if (newUsername.length < 3) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Username must be at least 3 characters.'), backgroundColor: Colors.red));
+      _snack(AppStrings.usernameMin3, isError: true);
       return;
     }
     if (newUsername.toLowerCase() == _currentUsername.toLowerCase()) return;
 
     setState(() => _isLoading = true);
-
     try {
-      final existingUser = await supabase.from('profiles').select('id').eq('username', newUsername).maybeSingle();
-      if (existingUser != null) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This username is already taken!'), backgroundColor: Colors.red));
+      final existing = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', newUsername)
+          .maybeSingle();
+      if (existing != null) {
+        _snack(AppStrings.usernameTaken, isError: true);
         setState(() => _isLoading = false);
         return;
       }
-
       final user = supabase.auth.currentUser;
       if (user != null) {
         await supabase.from('profiles').update({'username': newUsername}).eq('id', user.id);
         await supabase.auth.updateUser(UserAttributes(data: {'username': newUsername}));
-
         setState(() => _currentUsername = newUsername);
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Username updated successfully!'), backgroundColor: Colors.green));
+        _snack(AppStrings.usernameUpdated);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      _snack(AppStrings.errorWith(e), isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -70,105 +81,390 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _updatePassword() async {
     final newPassword = _passwordController.text.trim();
     if (newPassword.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password must be at least 6 characters.'), backgroundColor: Colors.red));
+      _snack(AppStrings.passwordMin6, isError: true);
       return;
     }
-
     setState(() => _isLoading = true);
-
     try {
       await supabase.auth.updateUser(UserAttributes(password: newPassword));
       _passwordController.clear();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated successfully!'), backgroundColor: Colors.green));
+      _snack(AppStrings.passwordUpdated);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      _snack(AppStrings.errorWith(e), isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // Admin: benzer alışkanlıkları tek çatı altında toplayan 24s işini elle
+  // tetikler (duplicate-habits edge function). Sonuç snackbar'da gösterilir.
+  Future<void> _runMerge() async {
+    setState(() => _merging = true);
+    try {
+      final res = await HabitRepository().runHabitDeduplication();
+      final merged = (res['merged'] as num?)?.toInt() ?? 0;
+      final promoted = (res['promoted'] as num?)?.toInt() ?? 0;
+      _snack(AppStrings.adminMergeDone(merged, promoted));
+    } catch (e) {
+      _snack(AppStrings.adminMergeFailed(e), isError: true);
+    } finally {
+      if (mounted) setState(() => _merging = false);
+    }
+  }
+
+  void _snack(String msg, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: isError ? Colors.redAccent : context.appAccent,
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.appBg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: context.appBg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-        title: const Text('Settings', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 24)),
+        iconTheme: IconThemeData(color: context.appText),
+        title: Text(AppStrings.settings,
+            style: TextStyle(
+                color: context.appText,
+                fontWeight: FontWeight.w800,
+                fontSize: 20)),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('ACCOUNT INFO', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-            const SizedBox(height: 20),
+            _sectionLabel(AppStrings.appearance),
+            const SizedBox(height: 12),
+            _themeToggleTile(),
+            const SizedBox(height: 32),
+
+            _sectionLabel(AppStrings.languageLabel),
+            const SizedBox(height: 12),
+            _languageTile(),
+            const SizedBox(height: 32),
+
+            _sectionLabel(AppStrings.accountInfo),
+            const SizedBox(height: 12),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(color: Colors.grey.shade200, border: Border.all(color: Colors.black, width: 2)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: context.appCard,
+                borderRadius: BorderRadius.circular(14),
+                
+              ),
+              child: Row(
                 children: [
-                  const Text('Email Address', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black54)),
-                  const SizedBox(height: 5),
-                  Text(_email, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: context.appAccent.withAlpha(20),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.email_outlined,
+                        color: context.appAccent, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(AppStrings.emailAddress,
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: context.appSub)),
+                        const SizedBox(height: 2),
+                        Text(_email,
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: context.appText)),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 40),
-            const Text('CHANGE USERNAME', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _usernameController,
-              decoration: const InputDecoration(
-                labelText: 'New Username',
-                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black, width: 2)),
-                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black, width: 2)),
-                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black, width: 3)),
-              ),
-            ),
-            const SizedBox(height: 15),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white),
-                onPressed: _isLoading ? null : _updateUsername,
-                child: _isLoading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text('Save Username', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
-            ),
-            const SizedBox(height: 40),
-            const Text('CHANGE PASSWORD', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'New Password',
-                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black, width: 2)),
-                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black, width: 2)),
-                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black, width: 3)),
-              ),
-            ),
-            const SizedBox(height: 15),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white),
-                onPressed: _isLoading ? null : _updatePassword,
-                child: _isLoading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text('Save New Password', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
-            ),
+            const SizedBox(height: 32),
+
+            _sectionLabel(AppStrings.changeUsername),
+            const SizedBox(height: 12),
+            _field(_usernameController, AppStrings.newUsername,
+                Icons.person_outline_rounded),
+            const SizedBox(height: 12),
+            _actionButton(
+                AppStrings.saveUsername, _isLoading ? null : _updateUsername),
+            const SizedBox(height: 32),
+
+            _sectionLabel(AppStrings.changePassword),
+            const SizedBox(height: 12),
+            _field(_passwordController, AppStrings.newPassword,
+                Icons.lock_outline_rounded,
+                obscure: true),
+            const SizedBox(height: 12),
+            _actionButton(AppStrings.saveNewPassword,
+                _isLoading ? null : _updatePassword),
+            const SizedBox(height: 32),
+
+            _sectionLabel(AppStrings.adminTitle),
+            const SizedBox(height: 12),
+            _adminMergeTile(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _adminMergeTile() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.appCard,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(
+                color: context.appAccent.withAlpha(20),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.merge_type_rounded,
+                  color: context.appAccent, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(AppStrings.adminMergeNow,
+                  style: TextStyle(
+                      color: context.appText,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700)),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          Text(AppStrings.adminMergeDesc,
+              style:
+                  TextStyle(color: context.appSub, fontSize: 12, height: 1.4)),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.appAccent,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: _merging ? null : _runMerge,
+              child: _merging
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white)),
+                        const SizedBox(width: 10),
+                        Text(AppStrings.adminMergeRunning,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    )
+                  : Text(AppStrings.adminMergeNow,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _themeToggleTile() {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeService.instance.notifier,
+      builder: (ctx, mode, child) {
+        final isDark = mode == ThemeMode.dark;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: context.appCard,
+            borderRadius: BorderRadius.circular(14),
+            
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: context.appAccent.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                  color: context.appAccent,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(AppStrings.theme,
+                        style: TextStyle(
+                            color: context.appText,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(isDark ? AppStrings.darkMode : AppStrings.lightMode,
+                        style: TextStyle(color: context.appSub, fontSize: 12)),
+                  ],
+                ),
+              ),
+              Switch.adaptive(
+                value: isDark,
+                onChanged: (v) => ThemeService.instance.toggle(),
+                activeThumbColor: context.appAccent,
+                activeTrackColor: context.appAccent.withAlpha(80),
+                inactiveThumbColor: context.appSub,
+                inactiveTrackColor: context.appBorder,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _languageTile() {
+    final isTr = context.locale.languageCode == 'tr';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: context.appCard,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: context.appAccent.withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.language_rounded,
+                color: context.appAccent, size: 18),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(AppStrings.language,
+                style: TextStyle(
+                    color: context.appText,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700)),
+          ),
+          _langPill(AppStrings.turkish, isTr,
+              () => context.setLocale(const Locale('tr'))),
+          const SizedBox(width: 8),
+          _langPill(AppStrings.english, !isTr,
+              () => context.setLocale(const Locale('en'))),
+        ],
+      ),
+    );
+  }
+
+  Widget _langPill(String label, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? context.appAccent : context.appBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: selected ? context.appAccent : context.appBorder),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : context.appSub,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String text) => Text(
+        text,
+        style: TextStyle(
+          color: context.appSub,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 2,
+        ),
+      );
+
+  Widget _field(TextEditingController controller, String label, IconData icon,
+      {bool obscure = false}) {
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      style: TextStyle(color: context.appText, fontWeight: FontWeight.w600, fontSize: 15),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: context.appSub, fontSize: 13),
+        prefixIcon: Icon(icon, color: context.appSub, size: 18),
+        filled: true,
+        fillColor: context.appCard,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.appBorder, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.appAccent, width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _actionButton(String label, VoidCallback? onPressed) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: context.appAccent,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          disabledBackgroundColor: context.appBorder,
+          elevation: 0,
+        ),
+        onPressed: onPressed,
+        child: _isLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            : Text(label,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
       ),
     );
   }
