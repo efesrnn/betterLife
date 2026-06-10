@@ -366,12 +366,17 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
           final raw = locale == 'tr' ? m['title_tr'] : m['title_en'];
           if (raw is String && raw.trim().isNotEmpty) title = raw;
         }
+        String? unitVal;
+        if (m != null) {
+          final picked = locale == 'tr' ? m['unit_tr'] : m['unit_en'];
+          unitVal = (picked ?? m['unit_tr'] ?? m['unit_en']) as String?;
+        }
         _select(
           id,
           title,
           type: m?['type'] as String?,
           direction: p?['target_direction'] as String?,
-          unit: (m?['unit_tr'] ?? m?['unit_en']) as String?,
+          unit: unitVal,
         );
       }
     } on HabitQuestException catch (e) {
@@ -534,7 +539,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
   Widget _catalogTile(BuildContext context, Habit h, String locale) {
     return GestureDetector(
       onTap: () => _select(h.id, h.title(locale),
-          type: h.type, direction: h.targetDirection, unit: h.unit),
+          type: h.type, direction: h.targetDirection, unit: h.unitFor(locale)),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),

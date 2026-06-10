@@ -66,7 +66,10 @@
     "today_target": "Today's target",
     "log_today": "Log today",
     "logged_today": "Logged today",
-    "calendar_title": "This month"
+    "calendar_title": "This month",
+    "days_on_target": "Days on target",
+    "plan_progress": "Plan progress",
+    "to_goal": "Progress to goal"
   },
   "checkin": {
     "title": "Daily Check-In",

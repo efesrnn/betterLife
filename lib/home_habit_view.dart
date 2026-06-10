@@ -31,8 +31,10 @@ class _HomeHabitsPagerState extends State<HomeHabitsPager> {
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  Future<void> _load({bool silent = false}) async {
+    // silent: log/relapse sonrası sessiz yenileme — tam ekran spinner gösterip
+    // sayfa state'lerini yok etmez (sayaç sıfırlanmaz, takvim yerinde güncellenir).
+    if (!silent) setState(() => _loading = true);
     try {
       final list = await _repo.getActiveHabits();
       if (!mounted) return;
@@ -82,8 +84,8 @@ class _HomeHabitsPagerState extends State<HomeHabitsPager> {
             controller: _controller,
             itemCount: _habits.length,
             onPageChanged: (i) => setState(() => _page = i),
-            itemBuilder: (_, i) =>
-                HabitHomeView(userHabit: _habits[i], onChanged: _load),
+            itemBuilder: (_, i) => HabitHomeView(
+                userHabit: _habits[i], onChanged: () => _load(silent: true)),
           ),
         ),
         if (_habits.length > 1)
@@ -172,13 +174,30 @@ class _HabitHomeViewState extends State<HabitHomeView> {
 
   Future<void> _logToday() async {
     setState(() => _busy = true);
+    bool ok = false;
+    String? errMsg;
     try {
       await _repo.logDailyValue(uh.id, _todayValue);
-    } catch (_) {}
+      ok = true;
+    } on HabitQuestException catch (e) {
+      errMsg = (e.details != null && e.details!.isNotEmpty)
+          ? '${e.messageKey.tr()}: ${e.details}'
+          : e.messageKey.tr();
+    } catch (e) {
+      errMsg = AppStrings.errorWith(e);
+    }
     if (!mounted) return;
     setState(() => _busy = false);
-    await _loadLogs();
+    await _loadLogs(); // her durumda takvimi tazele (mevcut kayıt da görünsün)
     widget.onChanged();
+    _snack(ok ? AppStrings.loggedTodayMsg : (errMsg ?? ''), ok: ok);
+  }
+
+  void _snack(String m, {bool ok = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m),
+        backgroundColor: ok ? context.appAccent : Colors.redAccent));
   }
 
   @override
@@ -294,7 +313,8 @@ class _HabitHomeViewState extends State<HabitHomeView> {
           const SizedBox(width: 12),
           Expanded(
               child: _stat(context, Icons.block_rounded,
-                  AppStrings.ifContinued, '$avoided ${uh.habit?.unit ?? ""}')),
+                  AppStrings.ifContinued,
+                  '$avoided ${uh.habit?.unitFor(tr ? 'tr' : 'en') ?? ""}')),
         ]),
         const SizedBox(height: 16),
         SizedBox(
@@ -320,7 +340,8 @@ class _HabitHomeViewState extends State<HabitHomeView> {
   // ── REDUCE / GRADUAL görünümü (sayaç + takvim) ────────────
   Widget _reduceView(BuildContext context, bool tr, int dayIndex) {
     final target = _targetForDay(dayIndex);
-    final unit = uh.habit?.unit ?? '';
+    final locale = tr ? 'tr' : 'en';
+    final unit = uh.habit?.unitFor(locale) ?? '';
     final cost = uh.unitCost;
     final logged = uh.loggedToday;
 
@@ -438,8 +459,84 @@ class _HabitHomeViewState extends State<HabitHomeView> {
           ),
         ),
         const SizedBox(height: 16),
+        _reduceStats(context, tr),
+        const SizedBox(height: 16),
         _calendar(context, tr),
       ],
+    );
+  }
+
+  // ── Tasarruf + hedefe uyum + ilerleme barı ────────────────
+  Widget _reduceStats(BuildContext context, bool tr) {
+    final start = uh.startValue ?? 0;
+    final tgt = uh.targetValue ?? 0;
+    final cost = uh.unitCost;
+    final savedTotal = _logs.fold<double>(
+        0, (s, l) => s + ((start - l.reportedValue).clamp(0, 100000)) * cost);
+    final daysOnTarget = _logs.where((l) => l.isSuccess).length;
+    final isGradual = uh.programType == ProgramType.gradualDecrease ||
+        uh.programType == ProgramType.gradualIncrease;
+    double progress;
+    String progLabel;
+    if (isGradual && uh.targetDate != null) {
+      final total = uh.targetDate!.difference(uh.sinceDate).inDays;
+      final elapsed = DateTime.now().difference(uh.sinceDate).inDays;
+      progress = total > 0 ? (elapsed / total).clamp(0.0, 1.0) : 0.0;
+      progLabel = AppStrings.planProgress;
+    } else {
+      final latest = _logs.isNotEmpty ? _logs.first.reportedValue : start;
+      progress = (start - tgt).abs() > 0
+          ? ((start - latest) / (start - tgt)).clamp(0.0, 1.0)
+          : 0.0;
+      progLabel = AppStrings.toGoal;
+    }
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.appCard,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(
+                child: _stat(context, Icons.savings_rounded,
+                    AppStrings.savedShort, '₺${savedTotal.toStringAsFixed(0)}',
+                    color: context.appAccent)),
+            const SizedBox(width: 12),
+            Expanded(
+                child: _stat(context, Icons.event_available_rounded,
+                    AppStrings.daysOnTarget, '$daysOnTarget')),
+          ]),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(progLabel,
+                  style: TextStyle(
+                      color: context.appSub,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+              Text('%${(progress * 100).toStringAsFixed(0)}',
+                  style: TextStyle(
+                      color: context.appAccent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 9,
+              backgroundColor: context.appBorder,
+              valueColor: AlwaysStoppedAnimation<Color>(context.appAccent),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -473,17 +570,27 @@ class _HabitHomeViewState extends State<HabitHomeView> {
       cells.add(Container(
         decoration: BoxDecoration(
           color: bg,
-          shape: BoxShape.circle,
+          borderRadius: BorderRadius.circular(8),
           border: isToday
               ? Border.all(color: context.appAccent, width: 1.5)
               : null,
         ),
         alignment: Alignment.center,
-        child: Text('$day',
-            style: TextStyle(
-                color: fg,
-                fontSize: 12,
-                fontWeight: isToday ? FontWeight.w900 : FontWeight.w500)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('$day',
+                style: TextStyle(
+                    color: log != null ? fg : context.appTextDim,
+                    fontSize: 9,
+                    fontWeight: isToday ? FontWeight.w900 : FontWeight.w500)),
+            if (log != null)
+              Text(log.reportedValue.toStringAsFixed(0),
+                  style: TextStyle(
+                      color: fg, fontSize: 12, fontWeight: FontWeight.w800)),
+          ],
+        ),
       ));
     }
     return Container(
@@ -508,6 +615,7 @@ class _HabitHomeViewState extends State<HabitHomeView> {
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: 6,
             crossAxisSpacing: 6,
+            childAspectRatio: 0.82,
             children: cells,
           ),
         ],

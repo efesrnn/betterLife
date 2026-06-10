@@ -97,6 +97,9 @@ class AppStrings {
   static String get logTodayLabel => 'home.log_today'.tr();
   static String get loggedTodayMsg => 'home.logged_today'.tr();
   static String get calendarTitle => 'home.calendar_title'.tr();
+  static String get daysOnTarget => 'home.days_on_target'.tr();
+  static String get planProgress => 'home.plan_progress'.tr();
+  static String get toGoal => 'home.to_goal'.tr();
 
   // ── Check-in dialog ─────────────────────────────────────
   static String get dailyCheckIn => 'checkin.title'.tr();

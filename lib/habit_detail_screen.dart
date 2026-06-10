@@ -88,7 +88,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
     final h = _h;
     final slug = h?.slug ?? '';
     final isSmoking = slug.contains('smok') || slug.contains('cigaret');
-    final unit = h?.unit ?? '';
+    final unit = h?.unitFor(locale) ?? '';
 
     return Scaffold(
       backgroundColor: context.appBg,
